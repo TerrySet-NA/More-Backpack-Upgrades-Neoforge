@@ -1,0 +1,12 @@
+{
+  "item.mobackup.dimensional_magnet_upgrade": "次元磁吸升級",
+  "item.mobackup.dimensional_magnet_upgrade.tooltip": "將範圍內掉落物直接吸入綁定的 RS 網絡",
+  "item.mobackup.dimensional_pickup_upgrade": "次元拾取升級",
+  "item.mobackup.dimensional_pickup_upgrade.tooltip": "拾取的物品直接進入綁定的 RS 網絡",
+  "item.mobackup.dimensional_deposit_upgrade": "次元卸貨升級",
+  "item.mobackup.dimensional_deposit_upgrade.tooltip": "潛入右鍵容器將背包物品卸入 RS 網路或普通容器",
+  "creativetab.mobackup_tab": "更多背包升級",
+  "misc.refinedstorage.network_card.linked": "已綁定 RS 控制器",
+  "misc.refinedstorage.network_card.not_found": "未找到 RS 網路或網路不可用",
+  "misc.refinedstorage.network_card.tooltip": "已綁定座標（ %1$s, %2$s, %3$s ），維度 %4$s"
+}

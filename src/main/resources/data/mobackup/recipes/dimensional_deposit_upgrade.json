@@ -1,0 +1,28 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+        "ABA",
+        "CDC",
+        "AVA"
+    ],
+    "key": {
+        "A": {
+            "item": "minecraft:ender_eye"
+        },
+        "B": {
+            "item": "refinedstorage:controller"
+        },
+        "C": {
+            "item": "minecraft:dragon_breath"
+        },
+        "D": {
+            "item": "sophisticatedbackpacks:advanced_deposit_upgrade"
+        },
+        "V": {
+            "item": "minecraft:nether_star"
+        }
+    },
+    "result": {
+        "item": "mobackup:dimensional_deposit_upgrade"
+    }
+}
