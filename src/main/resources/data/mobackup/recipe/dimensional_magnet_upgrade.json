@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "AAA",
+    "BCB",
+    "AAA"
+  ],
+  "key": {
+    "A": {
+      "item": "minecraft:popped_chorus_fruit"
+    },
+    "B": {
+      "item": "minecraft:gold_ingot"
+    },
+    "C": {
+      "item": "mobackup:dimensional_pickup_upgrade"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "mobackup:dimensional_magnet_upgrade"
+  }
+}
