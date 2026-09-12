@@ -13,15 +13,11 @@ This mod adds two powerful "Dimensional" upgrades. To link an upgrade to your ne
 
 (本模组添加了兩种强大的“次元”升级卡。要将升级卡绑定到你的网络，只需手持升级卡对着 Refined Storage 的 控制器 (Controller) 按 Shift + 右键 即可。)
 
----
-
 ## ⚠️ General Upgrade Rules (通用升级规则)
 - **Strictly One per Type (同类型唯一):** Only one Dimensional Upgrade of each type can be installed in a single backpack.  
   *(每个背包仅限安装一个同类型的次元升级。)*
 - **Tier Incompatibility (无法兼容下属版本):** Mutually exclusive with vanilla/standard counterparts and lower tiers (cannot install basic or advanced versions alongside the dimensional version).  
   *(与该类型的原版升级及其下属低级版本互斥，无法同时共存安装。)*
-
----
 
 ## 🧲 Dimensional Magnet Upgrade (次元磁吸升级)
 
@@ -32,8 +28,6 @@ This mod adds two powerful "Dimensional" upgrades. To link an upgrade to your ne
 * **Configurable (可配置):** Customizable range and advanced filter settings (whitelist/blacklist/backpack contents match).
 *(支持自定义吸附范围以及进阶过滤器设置（白名单/黑名单/背包匹配）。)*
 
----
-
 ## 📥 Dimensional Pickup Upgrade (次元拾取升级)
 
 * **Function (功能):** Items you pick up normally (by walking over them) are instantly routed into your linked RS system.
@@ -42,8 +36,6 @@ This mod adds two powerful "Dimensional" upgrades. To link an upgrade to your ne
 *(支持【RS 网络优先】与【背包优先】双向切换。网络优先时，溢出物品存入背包；背包优先时，背包塞满后的多余物资自动传送回 RS。)*
 * **Anti-Conflict (防冲突机制):** Automatically coordinates with the Dimensional Magnet Upgrade to prevent redundant processing.
 *(背包内同时安装磁吸升级时，会自动协同避免重复路由。)*
-
----
 
 ## 🍖 Dimensional Feeding Upgrade (次元喂食升级)
 
@@ -54,8 +46,6 @@ This mod adds two powerful "Dimensional" upgrades. To link an upgrade to your ne
 * **Configurable (可配置):** Set hunger thresholds, food filters, and feeding conditions.
 *(支持设置喂食饥饿度阈值、食物过滤器与自动进食策略。)*
 
----
-
 ## 🔄 Dimensional Refill Upgrade (次元补货升级)
 
 * **Function (功能):** Keeps target slots (such as torches, building blocks, ammunition, or tools) constantly restocked directly from the linked RS network.
@@ -65,21 +55,15 @@ This mod adds two powerful "Dimensional" upgrades. To link an upgrade to your ne
 * **Smart Priority (智能优先级):** Configurable to draw supplies from the remote RS network or local backpack first.
 *(支持自由切换优先从 RS 调货补齐，或是优先消耗背包内备用物资。)*
 
----
-
 ## 📦 Dimensional Restock Upgrade (次元取货升级)
 
 * **Function (功能):** Takes items from target external containers (chests, machines) or non-linked RS networks with a single Shift-Right-Click.
 *(Shift+右键外部箱子、容器或非记录的 RS 网络时，快速提取目标物品。)*
 
----
-
 ## 🗳️ Dimensional Deposit Upgrade (次元卸货升级)
 
 * **Function (功能):** Shift-Right-Click external containers or different RS networks to rapidly deposit filtered materials.
 *(Shift+右键外部容器或不同的 RS 网络时，快速卸下战利品与物资。)*
-
----
 
 ## 🌊 Dimensional Pump Upgrade (次元液泵升级)
 
@@ -89,8 +73,6 @@ This mod adds two powerful "Dimensional" upgrades. To link an upgrade to your ne
 *(即便随身背包**没有安装任何储罐升级**，也能直接把整套基地 RS 网络当成无限随身储罐直接抽水与倒水！)*
 * **Comprehensive Control (全方位模式控制):** Features in/out direction toggles, world/container/hand interaction switches, and RS-First vs Backpack-First fluid routing.
 *(完整继承官方抽入/排出方向、世界方块/手持容器/相邻储罐交互开关，并提供 RS 网络与随身储罐的优先级分流。)*
-
----
 
 ## 🧪 Dimensional Alchemy Upgrade (次元炼金升级)
 
@@ -114,7 +96,6 @@ This mod adds two powerful "Dimensional" upgrades. To link an upgrade to your ne
 ```
 config/MoreBackpackUpgrades-common.toml
 ```
-
 
 ## 📝 Credits & License (鳴謝與授權)
 - **Original Author (原作者)**: 空枝霁雨 (KongZhiJiYu)
