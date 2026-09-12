@@ -9,9 +9,9 @@ Forget about manually emptying your backpack after a mining trip. With these new
 (忘掉每次挖矿归来都要手动清空背包的繁琐吧。有了这些全新的升级卡，无论你身处何地或跨越维度，物品都能直接传送进你的数字存储系统中！)
 
 ## ✨ Features (功能特性) 
-This mod adds two powerful "Dimensional" upgrades. To link an upgrade to your network, simply Shift + Right-Click on a Refined Storage Controller with the upgrade item in hand.
+This mod adds eight powerful "Dimensional" upgrades. To link an upgrade to your network, simply Shift + Right-Click on a Refined Storage Controller with the upgrade item in hand.
 
-(本模组添加了兩种强大的“次元”升级卡。要将升级卡绑定到你的网络，只需手持升级卡对着 Refined Storage 的 控制器 (Controller) 按 Shift + 右键 即可。)
+(本模组添加了八种强大的“次元”升级卡。要将升级卡绑定到你的网络，只需手持升级卡对着 Refined Storage 的 控制器 (Controller) 按 Shift + 右键 即可。)
 
 ## ⚠️ General Upgrade Rules (通用升级规则)
 - **Strictly One per Type (同类型唯一):** Only one Dimensional Upgrade of each type can be installed in a single backpack.  
