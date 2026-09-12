@@ -34,7 +34,7 @@
   "gui.mobackup.upgrade.dimensional_pump": "次元液泵",
   "gui.mobackup.upgrade.dimensional_pump.tooltip": "次元液泵升級設定", 
 
-  "item.mobackup.dimensional_alchemy_upgrade": "次元高級鍊金升級",
+  "item.mobackup.dimensional_alchemy_upgrade": "次元鍊金升級",
   "item.mobackup.dimensional_alchemy_upgrade.tooltip": "從綁定的 RS 網路獲取藥水、特殊食物、牛奶進行餵食",
   "gui.mobackup.upgrade.dimensional_alchemy": "次元鍊金",
   "gui.mobackup.upgrade.dimensional_alchemy.tooltip": "次元鍊金升級設定", 
