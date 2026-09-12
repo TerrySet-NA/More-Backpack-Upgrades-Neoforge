@@ -4,7 +4,10 @@
   "package": "com.kzjy.mobackup.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "StorageUpgradeSlotMixin"
+    "StorageUpgradeSlotMixin", 
+    "StorageContainerMenuBaseMixin",
+    "FluidFilterControlInvoker", 
+    "AlchemyUpgradeWrapperAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

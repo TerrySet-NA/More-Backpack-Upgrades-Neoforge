@@ -9,9 +9,7 @@
 package com.kzjy.mobackup.item;
 
 // import com.kzjy.mobackup.MoBackup;
-import com.kzjy.mobackup.wrapper.DimensionalPickupUpgradeWrapper;
-// import com.mojang.logging.LogUtils;
-
+import com.kzjy.mobackup.wrapper.DimensionalRefillUpgradeWrapper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
@@ -19,39 +17,39 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.p3pp3rf1y.sophisticatedbackpacks.Config;
-// import net.p3pp3rf1y.sophisticatedbackpacks.upgrades.refill.RefillUpgradeItem;
+// import net.p3pp3rf1y.sophisticatedbackpacks.upgrades.mobcatcher.MobCatcherUpgradeItem;
+import net.p3pp3rf1y.sophisticatedbackpacks.upgrades.refill.RefillUpgradeItem;
+import net.p3pp3rf1y.sophisticatedbackpacks.upgrades.refill.RefillUpgradeWrapper;
 // import net.p3pp3rf1y.sophisticatedcore.api.IStorageWrapper;
 // import net.p3pp3rf1y.sophisticatedcore.common.gui.UpgradeSlotChangeResult;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.UpgradeType;
-import net.p3pp3rf1y.sophisticatedcore.upgrades.pickup.PickupUpgradeItem;
-import net.p3pp3rf1y.sophisticatedcore.upgrades.pickup.PickupUpgradeWrapper;
 
 import java.util.List;
 // import java.util.Set;
-import java.util.function.IntSupplier;
-
-// import org.slf4j.Logger;
 
 @SuppressWarnings("null")
-public class DimensionalPickupUpgradeItem extends PickupUpgradeItem implements IRSLinkedItem {
+public class DimensionalRefillUpgradeItem extends RefillUpgradeItem implements IRSLinkedItem {
+    public static final UpgradeType<RefillUpgradeWrapper> TYPE = new UpgradeType<>(
+            DimensionalRefillUpgradeWrapper::new);
 
-    public static final UpgradeType<PickupUpgradeWrapper> TYPE = new UpgradeType<>(
-            DimensionalPickupUpgradeWrapper::new);
-
-    public DimensionalPickupUpgradeItem(IntSupplier filterSlotCount) {
-        super(filterSlotCount, Config.SERVER.maxUpgradesPerStorage);
+    public DimensionalRefillUpgradeItem() {
+        // 啟用目標槽位自訂 (true) 與 中鍵選取方塊支援 (true)
+        super(Config.SERVER.advancedRefillUpgrade.filterSlots::get, true, true);
     }
 
     @Override
-    public UpgradeType<PickupUpgradeWrapper> getType() {
+    public UpgradeType<RefillUpgradeWrapper> getType() {
         return TYPE;
     }
 
     @Override
-	public List<UpgradeConflictDefinition> getUpgradeConflicts() {
-		return List.of(new UpgradeConflictDefinition(item -> item instanceof PickupUpgradeItem, 0,
-				Component.translatable("gui.sophisticatedbackpacks.status.pickup_only_one_allowed")));
-	}
+    public List<UpgradeConflictDefinition> getUpgradeConflicts() {
+        return List.of(new UpgradeConflictDefinition(
+                item -> item instanceof RefillUpgradeItem,
+                0,
+                Component.translatable("gui.sophisticatedbackpacks.status.refill_only_one_allowed")
+        ));
+    }
 
     @Override
     public InteractionResult useOn(UseOnContext ctx) {

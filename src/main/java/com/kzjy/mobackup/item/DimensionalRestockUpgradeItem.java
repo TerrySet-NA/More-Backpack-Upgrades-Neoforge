@@ -9,7 +9,7 @@
 package com.kzjy.mobackup.item;
 
 // import com.kzjy.mobackup.MoBackup;
-import com.kzjy.mobackup.wrapper.DimensionalDepositUpgradeWrapper;
+import com.kzjy.mobackup.wrapper.DimensionalRestockUpgradeWrapper;
 import net.minecraft.network.chat.Component;
 // import net.minecraft.world.InteractionResult;
 // import net.minecraft.world.item.Item;
@@ -17,35 +17,38 @@ import net.minecraft.network.chat.Component;
 // import net.minecraft.world.item.TooltipFlag;
 // import net.minecraft.world.item.context.UseOnContext;
 import net.p3pp3rf1y.sophisticatedbackpacks.Config;
-import net.p3pp3rf1y.sophisticatedbackpacks.upgrades.deposit.DepositUpgradeItem;
-import net.p3pp3rf1y.sophisticatedbackpacks.upgrades.deposit.DepositUpgradeWrapper;
+// import net.p3pp3rf1y.sophisticatedbackpacks.upgrades.refill.RefillUpgradeItem;
+import net.p3pp3rf1y.sophisticatedbackpacks.upgrades.restock.RestockUpgradeItem;
+import net.p3pp3rf1y.sophisticatedbackpacks.upgrades.restock.RestockUpgradeWrapper;
 // import net.p3pp3rf1y.sophisticatedcore.api.IStorageWrapper;
 // import net.p3pp3rf1y.sophisticatedcore.common.gui.UpgradeSlotChangeResult;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.UpgradeType;
-// import net.p3pp3rf1y.sophisticatedcore.upgrades.feeding.FeedingUpgradeItem;
 
 import java.util.List;
 // import java.util.Set;
 
 @SuppressWarnings("null")
-public class DimensionalDepositUpgradeItem extends DepositUpgradeItem implements IMoBackupUpgrade {
-    public static final UpgradeType<DepositUpgradeWrapper> TYPE = new UpgradeType<>(
-            DimensionalDepositUpgradeWrapper::new);
+public class DimensionalRestockUpgradeItem extends RestockUpgradeItem implements IMoBackupUpgrade {
+    public static final UpgradeType<RestockUpgradeWrapper> TYPE = new UpgradeType<>(
+            DimensionalRestockUpgradeWrapper::new);
 
-    public DimensionalDepositUpgradeItem() {
-        super(Config.SERVER.advancedDepositUpgrade.filterSlots::get);
+    public DimensionalRestockUpgradeItem() {
+        super(Config.SERVER.advancedRestockUpgrade.filterSlots::get);
     }
 
     @Override
-    public UpgradeType<DepositUpgradeWrapper> getType() {
+    public UpgradeType<RestockUpgradeWrapper> getType() {
         return TYPE;
     }
 
     @Override
-	public List<UpgradeConflictDefinition> getUpgradeConflicts() {
-		return List.of(new UpgradeConflictDefinition(item -> item instanceof DepositUpgradeItem, 0,
-				Component.translatable("gui.sophisticatedbackpacks.status.deposit_only_one_allowed")));
-	}
+    public List<UpgradeConflictDefinition> getUpgradeConflicts() {
+        return List.of(new UpgradeConflictDefinition(
+                item -> item instanceof RestockUpgradeItem,
+                0,
+                Component.translatable("gui.sophisticatedbackpacks.status.restock_only_one_allowed")
+        ));
+    }
 
     @Override
     public int getUpgradesPerStorage(String storageType) {

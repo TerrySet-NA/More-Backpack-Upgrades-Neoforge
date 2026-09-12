@@ -35,7 +35,12 @@ public class ModCreativeModeTabs {
                         // 添加所有升级物品到标签页
                         pOutput.accept(ModItems.DIMENSIONAL_MAGNET_UPGRADE.get());
                         pOutput.accept(ModItems.DIMENSIONAL_PICKUP_UPGRADE.get());
-                        // pOutput.accept(ModItems.DIMENSIONAL_DEPOSIT_UPGRADE.get());
+                        pOutput.accept(ModItems.DIMENSIONAL_DEPOSIT_UPGRADE.get());
+                        pOutput.accept(ModItems.DIMENSIONAL_FEEDING_UPGRADE.get());
+                        pOutput.accept(ModItems.DIMENSIONAL_REFILL_UPGRADE.get());
+                        pOutput.accept(ModItems.DIMENSIONAL_RESTOCK_UPGRADE.get());
+                        pOutput.accept(ModItems.DIMENSIONAL_PUMP_UPGRADE.get());
+                        pOutput.accept(ModItems.DIMENSIONAL_ALCHEMY_UPGRADE.get());
                     })
                     .build());
 

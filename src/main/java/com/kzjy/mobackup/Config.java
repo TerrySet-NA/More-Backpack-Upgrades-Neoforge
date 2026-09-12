@@ -35,7 +35,7 @@ public class Config {
         public Common(ModConfigSpec.Builder builder) {
             builder.push("Upgrades");
 
-            dimensionalMagnetRange = builder.comment("次元磁吸升级的吸附范围")
+            dimensionalMagnetRange = builder.comment("次元磁吸升級的吸附範圍")
                     .defineInRange("dimensionalMagnetRange", 5, 1, 64);
 
             builder.pop();

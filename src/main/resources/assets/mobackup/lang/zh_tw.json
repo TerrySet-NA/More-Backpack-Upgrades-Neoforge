@@ -1,11 +1,62 @@
 {
   "item.mobackup.dimensional_magnet_upgrade": "次元磁吸升級",
-  "item.mobackup.dimensional_magnet_upgrade.tooltip": "將範圍內掉落物直接吸入綁定的 RS 網絡",
+  "item.mobackup.dimensional_magnet_upgrade.tooltip": "將範圍內掉落物吸入綁定的 RS 網路",
+  "gui.mobackup.upgrade.dimensional_magnet": "次元磁吸",
+  "gui.mobackup.upgrade.dimensional_magnet.tooltip": "次元磁吸升級設定", 
+
   "item.mobackup.dimensional_pickup_upgrade": "次元拾取升級",
-  "item.mobackup.dimensional_pickup_upgrade.tooltip": "拾取的物品直接進入綁定的 RS 網絡",
+  "item.mobackup.dimensional_pickup_upgrade.tooltip": "拾取的物品進入綁定的 RS 網路",
+  "gui.mobackup.upgrade.dimensional_pickup": "次元拾取",
+  "gui.mobackup.upgrade.dimensional_pickup.tooltip": "次元拾取升級設定",
+
+  "item.mobackup.dimensional_feeding_upgrade": "次元餵食升級",
+  "item.mobackup.dimensional_feeding_upgrade.tooltip": "從綁定的 RS 網路獲取食物進行餵食",
+  "gui.mobackup.upgrade.dimensional_feeding": "次元餵食",
+  "gui.mobackup.upgrade.dimensional_feeding.tooltip": "次元餵食升級設定",
+
+  "item.mobackup.dimensional_refill_upgrade": "次元補貨升級",
+  "item.mobackup.dimensional_refill_upgrade.tooltip": "從綁定的 RS 網路補齊目標欄物資",
+  "gui.sophisticatedbackpacks.upgrades.dimensional_refill": "次元補貨",
+  "gui.sophisticatedbackpacks.upgrades.dimensional_refill.tooltip": "次元補貨升級設定", 
+
+  "item.mobackup.dimensional_restock_upgrade": "次元取貨升級",
+  "item.mobackup.dimensional_restock_upgrade.tooltip": "獲取容器中物品，可對 RS 網路",
+  "gui.mobackup.upgrade.dimensional_restock": "次元取貨",
+  "gui.mobackup.upgrade.dimensional_restock.tooltip": "次元取貨升級設定",
+
   "item.mobackup.dimensional_deposit_upgrade": "次元卸貨升級",
-  "item.mobackup.dimensional_deposit_upgrade.tooltip": "潛入右鍵容器將背包物品卸入 RS 網路或普通容器",
+  "item.mobackup.dimensional_deposit_upgrade.tooltip": "存入背包中物品，可對 RS 網路",
+  "gui.mobackup.upgrade.dimensional_deposit": "次元卸貨",
+  "gui.mobackup.upgrade.dimensional_deposit.tooltip": "次元卸貨升級設定",
+
+  "item.mobackup.dimensional_pump_upgrade": "次元液泵升級",
+  "item.mobackup.dimensional_pump_upgrade.tooltip": "將範圍內流體吸入綁定的 RS 網路",
+  "gui.mobackup.upgrade.dimensional_pump": "次元液泵",
+  "gui.mobackup.upgrade.dimensional_pump.tooltip": "次元液泵升級設定", 
+
+  "item.mobackup.dimensional_alchemy_upgrade": "次元高級鍊金升級",
+  "item.mobackup.dimensional_alchemy_upgrade.tooltip": "從綁定的 RS 網路獲取藥水、特殊食物、牛奶進行餵食",
+  "gui.mobackup.upgrade.dimensional_alchemy": "次元鍊金",
+  "gui.mobackup.upgrade.dimensional_alchemy.tooltip": "次元鍊金升級設定", 
+
   "creativetab.mobackup_tab": "更多背包升級",
+
+  "gui.sophisticatedbackpacks.status.magnet_only_one_allowed": "背包內僅允許安裝一個次元磁吸升級！",
+  "gui.sophisticatedbackpacks.status.pickup_only_one_allowed": "背包內僅允許安裝一個次元拾取升級！",
+  "gui.sophisticatedbackpacks.status.feeding_only_one_allowed": "背包內僅允許安裝一個次元餵食升級！",
+  "gui.sophisticatedbackpacks.status.refill_only_one_allowed": "背包內僅允許安裝一個次元補貨升級！",
+  "gui.sophisticatedbackpacks.status.restock_only_one_allowed": "背包內僅允許安裝一個次元取貨升級！",
+  "gui.sophisticatedbackpacks.status.deposit_only_one_allowed": "背包內僅允許安裝一個次元卸貨升級！",
+  "gui.sophisticatedbackpacks.status.pump_only_one_allowed": "背包內僅允許安裝一個次元液泵升級！", 
+  "gui.sophisticatedbackpacks.status.alchemy_only_one_allowed": "背包內僅允許安裝一個次元鍊金升級！", 
+
+  "gui.sophisticatedbackpacks.button.priority_toggle_rs_1": "優先級：RS 網路",
+  "gui.sophisticatedbackpacks.button.priority_toggle_rs_2": "優先使用 RS 網路",
+  "gui.sophisticatedbackpacks.button.priority_toggle_rs_3": "RS 不足時使用背包",
+  "gui.sophisticatedbackpacks.button.priority_toggle_backpack_1": "優先級：精妙背包",
+  "gui.sophisticatedbackpacks.button.priority_toggle_backpack_2": "優先使用隨身背包",
+  "gui.sophisticatedbackpacks.button.priority_toggle_backpack_3": "背包不足時使用 RS 網路",
+
   "misc.refinedstorage.network_card.linked": "已綁定 RS 控制器",
   "misc.refinedstorage.network_card.not_found": "未找到 RS 網路或網路不可用",
   "misc.refinedstorage.network_card.tooltip": "已綁定座標（ %1$s, %2$s, %3$s ），維度 %4$s"

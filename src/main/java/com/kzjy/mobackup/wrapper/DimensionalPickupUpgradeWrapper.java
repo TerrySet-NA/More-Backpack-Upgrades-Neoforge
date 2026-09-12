@@ -8,11 +8,10 @@
 
 package com.kzjy.mobackup.wrapper;
 
-import com.kzjy.mobackup.MoBackup;
 import com.kzjy.mobackup.core.PickupContext;
 import com.kzjy.mobackup.core.RSBridge;
 import com.kzjy.mobackup.item.DimensionalMagnetUpgradeItem;
-// import com.mojang.logging.LogUtils;
+import com.kzjy.mobackup.upgrade.IPriorityRoutingUpgrade;
 import com.refinedmods.refinedstorage.api.core.Action;
 import com.refinedmods.refinedstorage.api.network.Network;
 import com.refinedmods.refinedstorage.api.network.storage.StorageNetworkComponent;
@@ -20,25 +19,65 @@ import com.refinedmods.refinedstorage.api.storage.Actor;
 import com.refinedmods.refinedstorage.common.api.storage.PlayerActor;
 import com.refinedmods.refinedstorage.common.support.resource.ItemResource;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.p3pp3rf1y.sophisticatedcore.api.IStorageWrapper;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.pickup.PickupUpgradeWrapper;
-// import org.slf4j.Logger;
 
+import javax.annotation.Nullable;
 import java.util.function.Consumer;
 
 /**
  * 次元拾取升級的邏輯實現 (MC 1.21.1 / RS 2.x)
- * 拾取到的物品優先推送到 RS 網路，必要時回退到背包
+ * 支援透過 IPriorityRoutingUpgrade 切換【網路優先】與【背包優先】雙向路由
  */
 @SuppressWarnings("null")
-public class DimensionalPickupUpgradeWrapper extends PickupUpgradeWrapper {
+public class DimensionalPickupUpgradeWrapper extends PickupUpgradeWrapper implements IPriorityRoutingUpgrade {
 
     public DimensionalPickupUpgradeWrapper(IStorageWrapper storageWrapper, ItemStack upgrade,
                                            Consumer<ItemStack> upgradeSaveHandler) {
         super(storageWrapper, upgrade, upgradeSaveHandler);
+    }
+
+    private Network cachedNetwork;
+    private long lastNetworkCheckTime = -1;
+    private static final int NETWORK_CHECK_INTERVAL = 20;
+
+    private Network getCachedNetwork(Level level) {
+        long gameTime = level.getGameTime();
+        if (cachedNetwork == null || lastNetworkCheckTime < 0
+                || gameTime - lastNetworkCheckTime >= NETWORK_CHECK_INTERVAL) {
+            lastNetworkCheckTime = gameTime;
+            cachedNetwork = RSBridge.getNetwork(level, getUpgradeStack());
+        }
+        return cachedNetwork;
+    }
+
+    private Boolean networkFirstCache = null;
+
+    @Override
+    public boolean isNetworkFirst() {
+        if (networkFirstCache == null) {
+            CustomData customData = upgrade.get(DataComponents.CUSTOM_DATA);
+            if (customData != null && customData.contains(TAG_NETWORK_FIRST)) {
+                networkFirstCache = customData.copyTag().getBoolean(TAG_NETWORK_FIRST);
+            } else {
+                networkFirstCache = true; // 預設：RS 網路優先
+            }
+        }
+        return networkFirstCache;
+    }
+
+    @Override
+    public void setNetworkFirst(boolean networkFirst) {
+        this.networkFirstCache = networkFirst;
+        CustomData.update(DataComponents.CUSTOM_DATA, upgrade, tag -> {
+            tag.putBoolean(TAG_NETWORK_FIRST, networkFirst);
+        });
+        save();
     }
 
     @Override
@@ -52,51 +91,62 @@ public class DimensionalPickupUpgradeWrapper extends PickupUpgradeWrapper {
             return storageWrapper.getInventoryForUpgradeProcessing().insertItem(stack, simulate);
         }
 
-        // 寫入 RS 2.x 網路
-        Network network = getCachedNetwork(world);
-        if (network != null) {
-            StorageNetworkComponent storage = network.getComponent(StorageNetworkComponent.class);
-            if (storage != null) {
-                Action action = simulate ? Action.SIMULATE : Action.EXECUTE;
+        Player playerCtx = PickupContext.current();
 
-                // 1. 獲取上下文玩家並封裝為 Actor (空則回退至 Actor.EMPTY 防範介面變更)
-                Player playerCtx = PickupContext.current();
-                Actor actor = playerCtx != null ? new PlayerActor(playerCtx) : Actor.EMPTY;
-
-                // 2. 包裝為 RS 2.x 統一 ItemResource 並寫入
-                ItemResource resource = ItemResource.ofItemStack(stack);
-                long inserted = storage.insert(resource, stack.getCount(), action, actor);
-
-                if (inserted > 0) {
-                    MoBackup.LOGGER.info("[MoBackup-Debug] 次元拾取 -> 成功推送到 RS 網路 ({} x{})", stack.getHoverName().getString(), inserted);
-                    int remainingCount = stack.getCount() - (int) inserted;
-                    if (remainingCount <= 0) {
-                        return ItemStack.EMPTY; // 100% 寫入 RS 網路
-                    }
-                    // 部分寫入，剩餘數量繼續降級寫入背包
-                    stack = stack.copyWithCount(remainingCount);
+        if (isNetworkFirst()) {
+            // === 模式 A：網路優先 (RS -> 背包) ===
+            Network network = getCachedNetwork(world);
+            if (network != null) {
+                stack = insertIntoRsNetwork(network, stack, simulate, playerCtx);
+                if (stack.isEmpty()) {
+                    return ItemStack.EMPTY; // 全額寫入 RS
                 }
             }
+            // RS 裝不下或未連線，剩餘物資降級存入背包
+            return storageWrapper.getInventoryForUpgradeProcessing().insertItem(stack, simulate);
         } else {
-            MoBackup.LOGGER.warn("[MoBackup-Debug] 次元拾取 -> RS 網路未連線，降級寫入精妙背包");
-        }
+            // === 模式 B：背包優先 (背包 -> RS 溢出) ===
+            stack = storageWrapper.getInventoryForUpgradeProcessing().insertItem(stack, simulate);
+            if (stack.isEmpty()) {
+                return ItemStack.EMPTY; // 全額存入背包
+            }
 
-        // 剩餘物品回退到精妙背包儲存
-        return storageWrapper.getInventoryForUpgradeProcessing().insertItem(stack, simulate);
+            // 背包滿了，溢出物資自動排入 RS 網路
+            Network network = getCachedNetwork(world);
+            if (network != null) {
+                stack = insertIntoRsNetwork(network, stack, simulate, playerCtx);
+            }
+            return stack;
+        }
     }
 
-    private Network cachedNetwork;
-    private long lastNetworkCheckTime = -1;
-    private static final int NETWORK_CHECK_INTERVAL = 20;
-
-    private Network getCachedNetwork(Level level) {
-        long gameTime = level.getGameTime();
-        if (cachedNetwork == null || lastNetworkCheckTime < 0
-                || gameTime - lastNetworkCheckTime >= NETWORK_CHECK_INTERVAL) {
-            lastNetworkCheckTime = gameTime;
-            cachedNetwork = RSBridge.getNetwork(level, getUpgradeStack());
-            MoBackup.LOGGER.info("[MoBackup-Debug] 拾取卡取得 RS 網路實例 -> {}", (cachedNetwork != null ? "【成功】" : "【失敗: null】"));
+    /**
+     * 封裝 RS 2.x 插入邏輯（支援模擬與真實寫入，並綁定玩家 Actor）
+     */
+    private ItemStack insertIntoRsNetwork(Network network, ItemStack stack, boolean simulate, @Nullable Player player) {
+        if (network == null || stack.isEmpty()) {
+            return stack;
         }
-        return cachedNetwork;
+
+        StorageNetworkComponent storage = network.getComponent(StorageNetworkComponent.class);
+        if (storage == null) {
+            return stack;
+        }
+
+        ItemResource resource = ItemResource.ofItemStack(stack);
+        Action action = simulate ? Action.SIMULATE : Action.EXECUTE;
+        Actor actor = player != null ? new PlayerActor(player) : Actor.EMPTY;
+
+        long inserted = storage.insert(resource, stack.getCount(), action, actor);
+        if (inserted <= 0) {
+            return stack;
+        }
+
+        int remainingCount = stack.getCount() - (int) inserted;
+        if (remainingCount <= 0) {
+            return ItemStack.EMPTY;
+        }
+
+        return stack.copyWithCount(remainingCount);
     }
 }

@@ -1,12 +1,63 @@
 {
   "item.mobackup.dimensional_magnet_upgrade": "Dimensional Magnet Upgrade",
-  "item.mobackup.dimensional_magnet_upgrade.tooltip": "Pulls items from range directly into linked RS Network",
+  "item.mobackup.dimensional_magnet_upgrade.tooltip": "Pulls item drops within range into the linked RS network",
+  "gui.mobackup.upgrade.dimensional_magnet": "Dimensional Magnet",
+  "gui.mobackup.upgrade.dimensional_magnet.tooltip": "Dimensional Magnet Upgrade Settings",
+
   "item.mobackup.dimensional_pickup_upgrade": "Dimensional Pickup Upgrade",
-  "item.mobackup.dimensional_pickup_upgrade.tooltip": "Picked up items go directly into linked RS Network",
+  "item.mobackup.dimensional_pickup_upgrade.tooltip": "Directs picked up items into the linked RS network",
+  "gui.mobackup.upgrade.dimensional_pickup": "Dimensional Pickup",
+  "gui.mobackup.upgrade.dimensional_pickup.tooltip": "Dimensional Pickup Upgrade Settings",
+
+  "item.mobackup.dimensional_feeding_upgrade": "Dimensional Feeding Upgrade",
+  "item.mobackup.dimensional_feeding_upgrade.tooltip": "Retrieves food from the linked RS network to feed the player",
+  "gui.mobackup.upgrade.dimensional_feeding": "Dimensional Feeding",
+  "gui.mobackup.upgrade.dimensional_feeding.tooltip": "Dimensional Feeding Upgrade Settings",
+
+  "item.mobackup.dimensional_refill_upgrade": "Dimensional Refill Upgrade",
+  "item.mobackup.dimensional_refill_upgrade.tooltip": "Refills target slots with items from the linked RS network",
+  "gui.sophisticatedbackpacks.upgrades.dimensional_refill": "Dimensional Refill",
+  "gui.sophisticatedbackpacks.upgrades.dimensional_refill.tooltip": "Dimensional Refill Upgrade Settings",
+
+  "item.mobackup.dimensional_restock_upgrade": "Dimensional Restock Upgrade",
+  "item.mobackup.dimensional_restock_upgrade.tooltip": "Takes items from target containers, supports RS networks",
+  "gui.mobackup.upgrade.dimensional_restock": "Dimensional Restock",
+  "gui.mobackup.upgrade.dimensional_restock.tooltip": "Dimensional Restock Upgrade Settings",
+
   "item.mobackup.dimensional_deposit_upgrade": "Dimensional Deposit Upgrade",
-  "item.mobackup.dimensional_deposit_upgrade.tooltip": "Sneak Right-Click container to deposit backpack items into RS Network or regular containers",
+  "item.mobackup.dimensional_deposit_upgrade.tooltip": "Deposits backpack items into target containers, supports RS networks",
+  "gui.mobackup.upgrade.dimensional_deposit": "Dimensional Deposit",
+  "gui.mobackup.upgrade.dimensional_deposit.tooltip": "Dimensional Deposit Upgrade Settings",
+
+  "item.mobackup.dimensional_pump_upgrade": "Dimensional Pump Upgrade",
+  "item.mobackup.dimensional_pump_upgrade.tooltip": "Pumps fluids within range into the linked RS network",
+  "gui.mobackup.upgrade.dimensional_pump": "Dimensional Pump",
+  "gui.mobackup.upgrade.dimensional_pump.tooltip": "Dimensional Pump Upgrade Settings",
+
+  "item.mobackup.dimensional_alchemy_upgrade": "Dimensional Advanced Alchemy Upgrade",
+  "item.mobackup.dimensional_alchemy_upgrade.tooltip": "Retrieves potions, special food, or milk from the linked RS network to apply effects",
+  "gui.mobackup.upgrade.dimensional_alchemy": "Dimensional Alchemy",
+  "gui.mobackup.upgrade.dimensional_alchemy.tooltip": "Dimensional Alchemy Upgrade Settings",
+
   "creativetab.mobackup_tab": "More Backpack Upgrades",
-  "misc.refinedstorage.network_card.linked": "Linked to RS Controller",
-  "misc.refinedstorage.network_card.not_found": "RS Network not found or unavailable",
-  "misc.refinedstorage.network_card.tooltip": "Linked at (%1$s, %2$s, %3$s) in %4$s"
+
+  "gui.sophisticatedbackpacks.status.magnet_only_one_allowed": "Only one Dimensional Magnet Upgrade is allowed per backpack!",
+  "gui.sophisticatedbackpacks.status.pickup_only_one_allowed": "Only one Dimensional Pickup Upgrade is allowed per backpack!",
+  "gui.sophisticatedbackpacks.status.feeding_only_one_allowed": "Only one Dimensional Feeding Upgrade is allowed per backpack!",
+  "gui.sophisticatedbackpacks.status.refill_only_one_allowed": "Only one Dimensional Refill Upgrade is allowed per backpack!",
+  "gui.sophisticatedbackpacks.status.restock_only_one_allowed": "Only one Dimensional Restock Upgrade is allowed per backpack!",
+  "gui.sophisticatedbackpacks.status.deposit_only_one_allowed": "Only one Dimensional Deposit Upgrade is allowed per backpack!",
+  "gui.sophisticatedbackpacks.status.pump_only_one_allowed": "Only one Dimensional Pump Upgrade is allowed per backpack!",
+  "gui.sophisticatedbackpacks.status.alchemy_only_one_allowed": "Only one Dimensional Alchemy Upgrade is allowed per backpack!",
+
+  "gui.sophisticatedbackpacks.button.priority_toggle_rs_1": "Priority: RS Network",
+  "gui.sophisticatedbackpacks.button.priority_toggle_rs_2": "Prioritize using RS network",
+  "gui.sophisticatedbackpacks.button.priority_toggle_rs_3": "Use backpack when RS is unavailable",
+  "gui.sophisticatedbackpacks.button.priority_toggle_backpack_1": "Priority: Backpack",
+  "gui.sophisticatedbackpacks.button.priority_toggle_backpack_2": "Prioritize using backpack",
+  "gui.sophisticatedbackpacks.button.priority_toggle_backpack_3": "Use RS network when backpack is unavailable",
+
+  "misc.refinedstorage.network_card.linked": "Bound to RS Controller",
+  "misc.refinedstorage.network_card.not_found": "RS network not found or unavailable",
+  "misc.refinedstorage.network_card.tooltip": "Bound to (%1$s, %2$s, %3$s) in %4$s"
 }

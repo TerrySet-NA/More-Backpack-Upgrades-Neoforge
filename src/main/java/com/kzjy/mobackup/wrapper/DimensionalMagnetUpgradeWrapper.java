@@ -8,8 +8,10 @@
 
 package com.kzjy.mobackup.wrapper;
 
-import com.kzjy.mobackup.MoBackup;
+// import com.kzjy.mobackup.MoBackup;
+// import com.kzjy.mobackup.MoBackup;
 import com.kzjy.mobackup.core.RSBridge;
+import com.kzjy.mobackup.upgrade.IPriorityRoutingUpgrade;
 import com.refinedmods.refinedstorage.api.core.Action;
 import com.refinedmods.refinedstorage.api.network.Network;
 import com.refinedmods.refinedstorage.api.network.storage.StorageNetworkComponent;
@@ -42,7 +44,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 @SuppressWarnings("null")
-public class DimensionalMagnetUpgradeWrapper extends MagnetUpgradeWrapper {
+public class DimensionalMagnetUpgradeWrapper extends MagnetUpgradeWrapper implements IPriorityRoutingUpgrade {
 
     private static final String PREVENT_REMOTE_MOVEMENT = "PreventRemoteMovement";
     private static final String ALLOW_MACHINE_MOVEMENT = "AllowMachineRemoteMovement";
@@ -66,7 +68,7 @@ public class DimensionalMagnetUpgradeWrapper extends MagnetUpgradeWrapper {
             lastNetworkCheckTime = gameTime;
             ItemStack currentStack = getUpgradeStack();
             cachedNetwork = RSBridge.getNetwork(level, currentStack);
-            MoBackup.LOGGER.info("[MoBackup-Debug] 磁吸卡取得 RS 網路實例 -> {}", (cachedNetwork != null ? "【成功】" : "【失敗: null】"));
+            // MoBackup.LOGGER.info("[MoBackup-Debug] 磁吸卡取得 RS 網路實例 -> {}", (cachedNetwork != null ? "【成功】" : "【失敗: null】"));
         }
         return cachedNetwork;
     }
@@ -168,52 +170,6 @@ public class DimensionalMagnetUpgradeWrapper extends MagnetUpgradeWrapper {
                 : data.contains(PREVENT_REMOTE_MOVEMENT) && !data.contains(ALLOW_MACHINE_MOVEMENT);
     }
 
-    private boolean tryToInsertItemCustom(ItemEntity itemEntity, Level world, @Nullable Player player) {
-        ItemStack stack = itemEntity.getItem();
-        int originalCount = stack.getCount();
-        MoBackup.LOGGER.info("[MoBackup-Debug] 磁吸捕獲掉落物: {} x{}", stack.getHoverName().getString(), originalCount);
-
-        boolean insertedToRs = false;
-
-        // 1. 嘗試優先寫入 RS 2.x 網路
-        Network network = getCachedNetwork(world);
-        if (network != null) {
-            ItemStack remaining = insertIntoRsNetwork(network, stack, false, player);
-            if (remaining.isEmpty()) {
-                MoBackup.LOGGER.info("[MoBackup-Debug] -> 100% 成功寫入 RS 網路！");
-                itemEntity.setItem(ItemStack.EMPTY);
-                itemEntity.discard();
-                return true; // 全部寫入 RS，直接成功返回
-            }
-
-            if (remaining.getCount() < originalCount) {
-                insertedToRs = true;
-                MoBackup.LOGGER.info("[MoBackup-Debug] -> RS 網路部分接收，剩餘 {} 個轉存背包", remaining.getCount());
-            }
-            stack = remaining;
-            itemEntity.setItem(stack);
-        } else {
-            MoBackup.LOGGER.warn("[MoBackup-Debug] -> RS 網路未連線，降級寫入背包");
-        }
-
-        // 2. 剩餘物品降級寫入精妙背包
-        IItemHandlerSimpleInserter inventory = storageWrapper.getInventoryForUpgradeProcessing();
-        ItemStack remaining = inventory.insertItem(stack, true);
-        boolean insertedToInventory = false;
-
-        if (remaining.getCount() != stack.getCount()) {
-            insertedToInventory = true;
-            remaining = inventory.insertItem(stack, false);
-            itemEntity.setItem(remaining);
-            if (remaining.isEmpty()) {
-                itemEntity.discard();
-            }
-        }
-
-        // 只要 RS 網路 或 精妙背包 有成功寫入任何數量的物品，即算作成功拾取
-        return insertedToRs || insertedToInventory;
-    }
-
     private ItemStack insertIntoRsNetwork(Network network, ItemStack stack, boolean simulate, @Nullable Player player) {
         if (network == null || stack.isEmpty()) {
             return stack;
@@ -221,7 +177,7 @@ public class DimensionalMagnetUpgradeWrapper extends MagnetUpgradeWrapper {
 
         StorageNetworkComponent storage = network.getComponent(StorageNetworkComponent.class);
         if (storage == null) {
-            MoBackup.LOGGER.warn("[MoBackup-Debug] RS 網路缺乏 StorageNetworkComponent 模組");
+            // MoBackup.LOGGER.warn("[MoBackup-Debug] RS 網路缺乏 StorageNetworkComponent 模組");
             return stack;
         }
 
@@ -229,7 +185,7 @@ public class DimensionalMagnetUpgradeWrapper extends MagnetUpgradeWrapper {
         Action action = simulate ? Action.SIMULATE : Action.EXECUTE;
 
         long inserted = storage.insert(resource, stack.getCount(), action, Actor.EMPTY);
-        MoBackup.LOGGER.info("[MoBackup-Debug] RS storage.insert 回傳寫入數量: {}", inserted);
+        // MoBackup.LOGGER.info("[MoBackup-Debug] RS storage.insert 回傳寫入數量: {}", inserted);
 
         if (inserted <= 0) {
             return stack;
@@ -253,22 +209,114 @@ public class DimensionalMagnetUpgradeWrapper extends MagnetUpgradeWrapper {
                 SoundSource.PLAYERS, 0.1F, (world.random.nextFloat() - world.random.nextFloat()) * 0.35F + 0.9F);
     }
 
+    private Boolean networkFirstCache = null;
+
+    public boolean isNetworkFirst() {
+        if (networkFirstCache == null) {
+            net.minecraft.world.item.component.CustomData customData = upgrade.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+            if (customData != null && customData.contains("PriorityNetwork")) {
+                networkFirstCache = customData.copyTag().getBoolean("PriorityNetwork");
+            } else {
+                networkFirstCache = true; // 預設：網路優先
+            }
+        }
+        return networkFirstCache;
+    }
+
+    public void setNetworkFirst(boolean networkFirst) {
+        this.networkFirstCache = networkFirst;
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, upgrade, tag -> {
+            tag.putBoolean("PriorityNetwork", networkFirst);
+        });
+        save();
+        // MoBackup.LOGGER.info("[MoBackup-Debug] 磁吸卡優先級已更新為: {}", networkFirst ? "【RS 網路優先】" : "【精妙背包優先】");
+    }
+
+    private boolean tryToInsertItemCustom(ItemEntity itemEntity, Level world, @Nullable Player player) {
+        ItemStack stack = itemEntity.getItem();
+        int originalCount = stack.getCount();
+        boolean networkFirst = isNetworkFirst();
+
+        if (networkFirst) {
+            // === 模式 A：網路優先 (RS -> 背包) ===
+            Network network = getCachedNetwork(world);
+            if (network != null) {
+                ItemStack remaining = insertIntoRsNetwork(network, stack, false, player);
+                if (remaining.isEmpty()) {
+                    itemEntity.setItem(ItemStack.EMPTY);
+                    itemEntity.discard();
+                    return true;
+                }
+                stack = remaining;
+                itemEntity.setItem(stack);
+            }
+            return insertIntoBackpack(itemEntity, stack);
+        } else {
+            // === 模式 B：背包優先 (背包 -> RS 溢出) ===
+            IItemHandlerSimpleInserter inventory = storageWrapper.getInventoryForUpgradeProcessing();
+            ItemStack remaining = inventory.insertItem(stack, false);
+            if (remaining.isEmpty()) {
+                itemEntity.setItem(ItemStack.EMPTY);
+                itemEntity.discard();
+                return true;
+            }
+
+            // 背包塞滿後的溢出物資，自動存入 RS 網路
+            itemEntity.setItem(remaining);
+            Network network = getCachedNetwork(world);
+            if (network != null) {
+                ItemStack afterRs = insertIntoRsNetwork(network, remaining, false, player);
+                itemEntity.setItem(afterRs);
+                if (afterRs.isEmpty()) {
+                    itemEntity.discard();
+                    return true;
+                }
+            }
+            return remaining.getCount() < originalCount;
+        }
+    }
+
+    private boolean insertIntoBackpack(ItemEntity itemEntity, ItemStack stack) {
+        IItemHandlerSimpleInserter inventory = storageWrapper.getInventoryForUpgradeProcessing();
+        ItemStack remaining = inventory.insertItem(stack, true);
+        if (remaining.getCount() != stack.getCount()) {
+            remaining = inventory.insertItem(stack, false);
+            itemEntity.setItem(remaining);
+            if (remaining.isEmpty()) {
+                itemEntity.discard();
+            }
+            return true;
+        }
+        return false;
+    }
+
     @Override
     public ItemStack pickup(Level world, ItemStack stack, boolean simulate) {
         if (!shouldPickupItems() || !getFilterLogic().matchesFilter(stack)) {
             return stack;
         }
 
-        // 1. 優先嘗試寫入 RS 網路
-        Network network = getCachedNetwork(world);
-        if (network != null) {
-            stack = insertIntoRsNetwork(network, stack, simulate, null);
-            if (stack.isEmpty()) {
-                return ItemStack.EMPTY; // 100% 塞入 RS 網路
+        if (isNetworkFirst()) {
+            // 網路優先：先 RS，後背包
+            Network network = getCachedNetwork(world);
+            if (network != null) {
+                stack = insertIntoRsNetwork(network, stack, simulate, null);
+                if (stack.isEmpty()) {
+                    return ItemStack.EMPTY;
+                }
             }
+            return storageWrapper.getInventoryForUpgradeProcessing().insertItem(stack, simulate);
+        } else {
+            // 背包優先：先背包，後 RS
+            stack = storageWrapper.getInventoryForUpgradeProcessing().insertItem(stack, simulate);
+            if (stack.isEmpty()) {
+                return ItemStack.EMPTY;
+            }
+            Network network = getCachedNetwork(world);
+            if (network != null) {
+                stack = insertIntoRsNetwork(network, stack, simulate, null);
+            }
+            return stack;
         }
-
-        // 2. 剩餘未塞完的數量降級寫入背包
-        return storageWrapper.getInventoryForUpgradeProcessing().insertItem(stack, simulate);
     }
 }
