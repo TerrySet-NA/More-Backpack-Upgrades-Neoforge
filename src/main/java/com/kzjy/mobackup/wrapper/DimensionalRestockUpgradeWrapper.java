@@ -1,141 +1,296 @@
-/*
- * Copyright (C) 2026 TerrySet
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- */
-
 package com.kzjy.mobackup.wrapper;
 
-// import com.kzjy.mobackup.MoBackup;
-// import com.kzjy.mobackup.core.RSBridge;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+
+import javax.annotation.Nullable;
+
+import com.kzjy.mobackup.core.RSBridge;
+import com.kzjy.mobackup.upgrade.IPriorityRoutingUpgrade;
+import com.kzjy.mobackup.util.SafetyRollbackHelper;
 import com.refinedmods.refinedstorage.api.core.Action;
 import com.refinedmods.refinedstorage.api.network.Network;
 import com.refinedmods.refinedstorage.api.network.storage.StorageNetworkComponent;
 import com.refinedmods.refinedstorage.api.resource.ResourceAmount;
 import com.refinedmods.refinedstorage.api.storage.Actor;
 import com.refinedmods.refinedstorage.common.api.storage.PlayerActor;
+import com.refinedmods.refinedstorage.common.security.BuiltinPermission;
 import com.refinedmods.refinedstorage.common.support.resource.ItemResource;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-// import net.minecraft.world.level.Level;
+import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
 import net.p3pp3rf1y.sophisticatedbackpacks.upgrades.restock.RestockUpgradeWrapper;
 import net.p3pp3rf1y.sophisticatedcore.api.IStorageWrapper;
 import net.p3pp3rf1y.sophisticatedcore.inventory.ITrackedContentsItemHandler;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
-
-@SuppressWarnings("null")
-public class DimensionalRestockUpgradeWrapper extends RestockUpgradeWrapper {
+public class DimensionalRestockUpgradeWrapper extends RestockUpgradeWrapper implements IPriorityRoutingUpgrade {
 
     public DimensionalRestockUpgradeWrapper(IStorageWrapper backpackWrapper, ItemStack upgrade, Consumer<ItemStack> upgradeSaveHandler) {
         super(backpackWrapper, upgrade, upgradeSaveHandler);
     }
 
-    /**
-     * 從指定 RS 網路中盡量全部取貨（批次循環裝滿背包，絕對防吞物、防爆倉蒸發）
-     */
-    public List<ItemStack> restockFromRsNetwork(Network network, Player player) {
-        List<ItemStack> transferredStacks = new ArrayList<>();
-        if (network == null) {
-            return transferredStacks;
+    private Boolean networkFirstCache = null;
+
+    @Override
+    public boolean isNetworkFirst() {
+        if (networkFirstCache == null) {
+            CustomData customData = upgrade.get(DataComponents.CUSTOM_DATA);
+            if (customData != null && customData.contains(TAG_NETWORK_FIRST)) {
+                networkFirstCache = customData.copyTag().getBoolean(TAG_NETWORK_FIRST);
+            } else {
+                networkFirstCache = false;
+            }
+        }
+        return networkFirstCache;
+    }
+
+    @Override
+    public void setNetworkFirst(boolean networkFirst) {
+        this.networkFirstCache = networkFirst;
+        CustomData.update(DataComponents.CUSTOM_DATA, upgrade, tag -> tag.putBoolean(TAG_NETWORK_FIRST, networkFirst));
+        save();
+    }
+
+    // 規則 4: 一鍵取貨經過審查，提示訊息印給開啟介面的玩家
+    public void performQuickRestockFromLinkedRs(@Nullable Player actionPlayer, Player messageTarget, Level safeLevel) {
+        if (RSBridge.getCoordinate(getUpgradeStack()) == null) {
+            messageTarget.displayClientMessage(Component.translatable("misc.refinedstorage.network_card.not_found"), true);
+            return;
         }
 
-        StorageNetworkComponent storage = network.getComponent(StorageNetworkComponent.class);
-        if (storage == null) {
-            return transferredStacks;
+        Network linkedNetwork = RSBridge.getNetwork(safeLevel, getUpgradeStack(), actionPlayer, BuiltinPermission.EXTRACT);
+        if (linkedNetwork == null) {
+            messageTarget.displayClientMessage(Component.translatable("misc.moback.no_permission.extract"), true);
+            return;
+        }
+
+        List<ItemStack> transferred = restockFromRsToBackpack(linkedNetwork, actionPlayer);
+        int count = transferred.size();
+        String key = count > 0 ? "gui.sophisticatedbackpacks.status.stacks_restocked" : "gui.sophisticatedbackpacks.status.nothing_to_restock";
+        messageTarget.displayClientMessage(Component.translatable(key, count), true);
+    }
+
+    @Override
+    public void onHandlerInteract(IItemHandler itemHandler, @Nullable Player player) {
+        if (player == null) return;
+        List<ItemStack> transferred = restockFromHandlerWithPriority(itemHandler, player);
+        int stacksRestocked = transferred.size();
+        String translKey = stacksRestocked > 0 ? "gui.sophisticatedbackpacks.status.stacks_restocked" : "gui.sophisticatedbackpacks.status.nothing_to_restock";
+        player.displayClientMessage(Component.translatable(translKey, stacksRestocked), true);
+    }
+
+    public List<ItemStack> restockFromHandlerWithPriority(IItemHandler sourceHandler, Player player) {
+        List<ItemStack> transferred = new ArrayList<>();
+        Level level = player.level();
+        StorageNetworkComponent targetStorage = null;
+
+        // 規則 10: 嚴格互斥 XOR
+        if (isNetworkFirst()) {
+            Network linkedNetwork = RSBridge.getNetwork(level, getUpgradeStack(), player, BuiltinPermission.INSERT);
+            if (linkedNetwork == null) {
+                player.displayClientMessage(Component.translatable("misc.moback.no_permission.insert"), true);
+                return transferred;
+            }
+            targetStorage = linkedNetwork.getComponent(StorageNetworkComponent.class);
+            if (targetStorage == null) return transferred;
         }
 
         ITrackedContentsItemHandler backpackInventory = storageWrapper.getInventoryForUpgradeProcessing();
-        Actor actor = new PlayerActor(player);
+        // 規則 1: RS 對 null 沒有防禦，使用 Actor.EMPTY
+        Actor actor = player != null ? new PlayerActor(player) : Actor.EMPTY;
 
-        // 遍歷 RS 網路中所有物資
-        for (ResourceAmount resourceAmount : storage.getAll()) {
-            if (resourceAmount.amount() <= 0) {
-                continue;
+        for (int slot = 0; slot < sourceHandler.getSlots(); slot++) {
+            ItemStack inSlot = sourceHandler.getStackInSlot(slot);
+            if (inSlot.isEmpty() || !getFilterLogic().matchesFilter(inSlot)) continue;
+
+            ItemStack simExtract = sourceHandler.extractItem(slot, inSlot.getCount(), true);
+            if (simExtract.isEmpty()) continue;
+
+            int availableCount = simExtract.getCount();
+            int toRs = 0;
+            int toBackpack = 0;
+
+            if (isNetworkFirst()) {
+                ItemResource res = ItemResource.ofItemStack(simExtract);
+                long rsCanAccept = targetStorage.insert(res, availableCount, Action.SIMULATE, actor);
+                toRs = (int) Math.min(availableCount, rsCanAccept);
+            } else {
+                toBackpack = calculateAcceptableForBackpack(backpackInventory, simExtract, availableCount);
             }
 
+            int totalToMove = isNetworkFirst() ? toRs : toBackpack;
+            if (totalToMove <= 0) continue;
+
+            ItemStack realExtracted = sourceHandler.extractItem(slot, totalToMove, false);
+            if (realExtracted.isEmpty()) continue;
+
+            // 1. 背包模式注入
+            if (toBackpack > 0) {
+                int countForBackpack = Math.min(toBackpack, realExtracted.getCount());
+                ItemStack stackForBackpack = realExtracted.copyWithCount(countForBackpack);
+                ItemStack backpackFailed = backpackInventory.insertItem(stackForBackpack, false);
+
+                // 規則 11: 不吞物資兜底
+                if (!backpackFailed.isEmpty()) {
+                    ItemStack containerRejected = ItemHandlerHelper.insertItem(sourceHandler, backpackFailed, false);
+                    if (!containerRejected.isEmpty()) fallbackSafety(containerRejected, player);
+                }
+                int backpackMoved = countForBackpack - backpackFailed.getCount();
+                if (backpackMoved > 0) transferred.add(realExtracted.copyWithCount(backpackMoved));
+            }
+
+            // 2. 網路模式注入
+            if (toRs > 0 && targetStorage != null) {
+                int countForRs = Math.min(toRs, realExtracted.getCount());
+                ItemResource res = ItemResource.ofItemStack(realExtracted);
+                long actuallyInserted = targetStorage.insert(res, countForRs, Action.EXECUTE, actor);
+
+                // 規則 11: 不吞物資兜底
+                if (actuallyInserted < countForRs) {
+                    int refund = countForRs - (int) actuallyInserted;
+                    ItemStack refundStack = realExtracted.copyWithCount(refund);
+                    ItemStack containerRejected = ItemHandlerHelper.insertItem(sourceHandler, refundStack, false);
+                    if (!containerRejected.isEmpty()) fallbackSafety(containerRejected, player);
+                }
+                if (actuallyInserted > 0) transferred.add(realExtracted.copyWithCount((int) actuallyInserted));
+            }
+        }
+        return transferred;
+    }
+
+    public void performRestockAndNotify(Network clickedNetwork, @Nullable Player player) {
+        if (player == null) return;
+        Level level = player.level();
+
+        if (!RSBridge.validateClickedNetwork(clickedNetwork, player, BuiltinPermission.EXTRACT)) {
+            player.displayClientMessage(Component.translatable("misc.moback.no_permission.extract"), true);
+            return;
+        }
+
+        List<ItemStack> transferredStacks = new ArrayList<>();
+
+        if (isNetworkFirst()) {
+            Network linkedNetworkRaw = RSBridge.getNetwork(level, getUpgradeStack());
+            if (linkedNetworkRaw != null && linkedNetworkRaw.equals(clickedNetwork)) {
+                player.displayClientMessage(Component.translatable("gui.sophisticatedbackpacks.status.nothing_to_restock"), true);
+                return;
+            }
+            Network linkedNetwork = RSBridge.getNetwork(level, getUpgradeStack(), player, BuiltinPermission.INSERT);
+            if (linkedNetwork == null) {
+                player.displayClientMessage(Component.translatable("misc.moback.no_permission.insert"), true);
+                return;
+            }
+            transferredStacks.addAll(restockFromRsToTargetRs(clickedNetwork, linkedNetwork, player));
+        } else {
+            transferredStacks.addAll(restockFromRsToBackpack(clickedNetwork, player));
+        }
+
+        int count = transferredStacks.size();
+        String translKey = count > 0 ? "gui.sophisticatedbackpacks.status.stacks_restocked" : "gui.sophisticatedbackpacks.status.nothing_to_restock";
+        player.displayClientMessage(Component.translatable(translKey, count), true);
+    }
+
+    public List<ItemStack> restockFromRsToBackpack(Network network, @Nullable Player player) {
+        List<ItemStack> transferredStacks = new ArrayList<>();
+        if (network == null) return transferredStacks;
+        StorageNetworkComponent storage = network.getComponent(StorageNetworkComponent.class);
+        if (storage == null) return transferredStacks;
+
+        ITrackedContentsItemHandler backpackInventory = storageWrapper.getInventoryForUpgradeProcessing();
+        Actor actor = player != null ? new PlayerActor(player) : Actor.EMPTY;
+
+        for (ResourceAmount resourceAmount : new ArrayList<>(storage.getAll())) {
+            if (resourceAmount.amount() <= 0) continue;
             if (resourceAmount.resource() instanceof ItemResource itemResource) {
                 ItemStack sample = itemResource.toItemStack(1);
+                if (!getFilterLogic().matchesFilter(sample)) continue;
 
-                // 檢查是否符合過濾器配置（過濾清單或背包現存物資）
-                if (!getFilterLogic().matchesFilter(sample)) {
-                    continue;
-                }
-
-                int maxStackSize = sample.getMaxStackSize();
-
-                // 批次循環提取：持續抽取該物品，直到背包空間全滿或 RS 庫存歸零
+                int maxStack = sample.getMaxStackSize();
                 while (true) {
-                    // 1. 第一層模擬：探測背包當前還能塞下幾顆該物品（以一組為單位探測）
-                    ItemStack probeStack = itemResource.toItemStack(maxStackSize);
+                    ItemStack probeStack = itemResource.toItemStack(maxStack);
                     ItemStack remainder = backpackInventory.insertItem(probeStack, true);
-                    int acceptable = maxStackSize - remainder.getCount();
+                    int acceptable = maxStack - remainder.getCount();
+                    if (acceptable <= 0) break;
 
-                    if (acceptable <= 0) {
-                        // 背包已無任何空間容納此物品，退出該物品的抽取
-                        break;
-                    }
-
-                    // 2. 第二層模擬：向 RS 網路模擬提取 acceptable 數量
                     long simExtracted = storage.extract(itemResource, acceptable, Action.SIMULATE, actor);
-                    if (simExtracted <= 0) {
-                        // RS 網路該物品已被抽光，退出
-                        break;
-                    }
+                    if (simExtracted <= 0) break;
 
-                    // 3. 再次核算安全數量
-                    int safeCount = (int) simExtracted;
-                    ItemStack toInsert = itemResource.toItemStack(safeCount);
-                    ItemStack doubleCheckRemainder = backpackInventory.insertItem(toInsert, true);
-                    int trulyAcceptable = safeCount - doubleCheckRemainder.getCount();
+                    int safeCount = (int) Math.min(acceptable, simExtracted);
+                    long actuallyExtracted = storage.extract(itemResource, safeCount, Action.EXECUTE, actor);
+                    if (actuallyExtracted <= 0) break;
 
-                    if (trulyAcceptable <= 0) {
-                        break;
-                    }
-
-                    // 4. 正式提取與寫入背包
-                    long actuallyExtracted = storage.extract(itemResource, trulyAcceptable, Action.EXECUTE, actor);
-                    if (actuallyExtracted <= 0) {
-                        break;
-                    }
-
-                    ItemStack extractedStack = itemResource.toItemStack(actuallyExtracted);
+                    ItemStack extractedStack = itemResource.toItemStack((int) actuallyExtracted);
                     ItemStack unhandled = backpackInventory.insertItem(extractedStack, false);
 
-                    // 5. 終極防吞物保護（Rollback）：若有任何溢出未進背包，立刻倒灌回 RS
+                    // 規則 11: 退貨回 RS，若 RS 退回失敗則啟動終極掉落防禦
                     if (!unhandled.isEmpty()) {
-                        ItemResource unhandledRes = ItemResource.ofItemStack(unhandled);
-                        storage.insert(unhandledRes, unhandled.getCount(), Action.EXECUTE, actor);
-                        // MoBackup.LOGGER.warn("[MoBackup-Safety] 取貨異常剩餘，已安全回存 RS: {} x{}", unhandled.getHoverName().getString(), unhandled.getCount());
+                        long rsRefunded = storage.insert(ItemResource.ofItemStack(unhandled), unhandled.getCount(), Action.EXECUTE, actor);
+                        if (rsRefunded < unhandled.getCount()) {
+                            ItemStack ultimateLeftover = unhandled.copyWithCount(unhandled.getCount() - (int) rsRefunded);
+                            fallbackSafety(ultimateLeftover, player);
+                        }
                     }
 
                     int finalTransferred = (int) actuallyExtracted - unhandled.getCount();
-                    if (finalTransferred > 0) {
-                        transferredStacks.add(extractedStack.copyWithCount(finalTransferred));
-                        // MoBackup.LOGGER.info("[MoBackup-Debug] 次元取貨 -> 成功從 RS 提取物資到背包: {} x{}", extractedStack.getHoverName().getString(), finalTransferred);
-                    }
-
-                    // 若本輪實際提取數量少於背包所需（說明 RS 已空），或背包產生拒收，立即結束當前物品循環
-                    if (finalTransferred < acceptable || !unhandled.isEmpty()) {
-                        break;
-                    }
+                    if (finalTransferred > 0) transferredStacks.add(extractedStack.copyWithCount(finalTransferred));
+                    if (finalTransferred < acceptable || !unhandled.isEmpty()) break;
                 }
             }
         }
-
         return transferredStacks;
     }
 
-    public void performRestockAndNotify(Network network, Player player) {
-        List<ItemStack> transferredStacks = restockFromRsNetwork(network, player);
-        int stacksRestocked = transferredStacks.size();
-        String translKey = stacksRestocked > 0 ? "gui.sophisticatedbackpacks.status.stacks_restocked" : "gui.sophisticatedbackpacks.status.nothing_to_restock";
-        player.displayClientMessage(Component.translatable(translKey, stacksRestocked), true);
+    private List<ItemStack> restockFromRsToTargetRs(Network sourceNetwork, Network targetNetwork, @Nullable Player player) {
+        List<ItemStack> transferredStacks = new ArrayList<>();
+        StorageNetworkComponent sourceStorage = sourceNetwork.getComponent(StorageNetworkComponent.class);
+        StorageNetworkComponent targetStorage = targetNetwork.getComponent(StorageNetworkComponent.class);
+        if (sourceStorage == null || targetStorage == null) return transferredStacks;
+
+        Actor actor = player != null ? new PlayerActor(player) : Actor.EMPTY;
+
+        for (ResourceAmount ra : new ArrayList<>(sourceStorage.getAll())) {
+            if (ra.amount() <= 0) continue;
+            if (ra.resource() instanceof ItemResource itemResource) {
+                ItemStack sample = itemResource.toItemStack(1);
+                if (!getFilterLogic().matchesFilter(sample)) continue;
+
+                while (true) {
+                    long canInsert = targetStorage.insert(itemResource, sample.getMaxStackSize(), Action.SIMULATE, actor);
+                    if (canInsert <= 0) break;
+                    long extracted = sourceStorage.extract(itemResource, canInsert, Action.EXECUTE, actor);
+                    if (extracted <= 0) break;
+                    
+                    long actuallyInserted = targetStorage.insert(itemResource, extracted, Action.EXECUTE, actor);
+                    if (actuallyInserted < extracted) {
+                        long toRefund = extracted - actuallyInserted;
+                        long refunded = sourceStorage.insert(itemResource, toRefund, Action.EXECUTE, actor);
+                        if (refunded < toRefund) {
+                            ItemStack lostStack = itemResource.toItemStack((int) (toRefund - refunded));
+                            fallbackSafety(lostStack, player);
+                        }
+                    }
+                    if (actuallyInserted > 0) transferredStacks.add(itemResource.toItemStack((int) actuallyInserted));
+                    if (actuallyInserted < canInsert) break;
+                }
+            }
+        }
+        return transferredStacks;
+    }
+
+    private int calculateAcceptableForBackpack(ITrackedContentsItemHandler backpackInventory, ItemStack sample, int available) {
+        ItemStack probeStack = sample.copyWithCount(available);
+        ItemStack remainder = backpackInventory.insertItem(probeStack, true);
+        return available - remainder.getCount();
+    }
+
+    private void fallbackSafety(ItemStack stack, @Nullable Player player) {
+        SafetyRollbackHelper.fallbackToBackpackOrPlayer(stack, storageWrapper, player);
     }
 }

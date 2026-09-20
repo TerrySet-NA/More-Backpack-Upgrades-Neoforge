@@ -1,11 +1,3 @@
-/*
- * Copyright (C) 2026 TerrySet
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- */
-
 package com.kzjy.mobackup.client.gui;
 
 import net.minecraft.network.chat.Component;
@@ -18,16 +10,21 @@ import net.p3pp3rf1y.sophisticatedcore.client.gui.utils.Position;
 
 public class DimensionalDepositUpgradeTab extends DepositUpgradeTab {
 
-    @SuppressWarnings("null")
     public DimensionalDepositUpgradeTab(DepositUpgradeContainer upgradeContainer, Position position, StorageScreenBase<?> screen) {
-        // 呼叫 5 參數的 protected super，傳入自訂標題與說明
         super(upgradeContainer, position, screen,
                 Component.translatable("gui.mobackup.upgrade.dimensional_deposit"),
                 Component.translatable("gui.mobackup.upgrade.dimensional_deposit.tooltip"));
 
+        // 2. 一鍵將背包中目標物品存入 RS 網路按鈕 (x + 3, y + 24)
+        addHideableChild(ModGuiControls.createQuickDepositButton(new Position(x + 3, y + 24), getContainer()));
+
+        // 1. 外部卸貨來源切換按鈕 (RS 網路 ⇄ 隨身背包) (x + 21, y + 24)
+        addHideableChild(ModGuiControls.createPriorityButton(new Position(x + 21, y + 24), getContainer()));
+
+        // 原版過濾模式控制項
         this.filterLogicControl = addHideableChild(new DepositFilterLogicControl.Advanced(
                 screen,
-                new Position(x + 3, y + 24),
+                new Position(x + 3, y + 44),
                 getContainer().getFilterLogicContainer(),
                 Config.SERVER.advancedDepositUpgrade.slotsInRow.get()
         ));

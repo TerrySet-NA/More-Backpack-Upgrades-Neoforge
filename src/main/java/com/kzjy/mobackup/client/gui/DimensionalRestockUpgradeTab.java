@@ -29,9 +29,15 @@ public class DimensionalRestockUpgradeTab extends RestockUpgradeTab {
                 Component.translatable("gui.mobackup.upgrade.dimensional_restock"),
                 Component.translatable("gui.mobackup.upgrade.dimensional_restock.tooltip"));
 
+        // 2. 一鍵將背包中目標物品存入 RS 網路按鈕 (x + 39, y + 24)
+        addHideableChild(ModGuiControls.createQuickRestockButton(new Position(x + 3, y + 24), getContainer()));
+        
+        // 1. 外部卸貨來源切換按鈕 (RS 網路 ⇄ 隨身背包) (x + 21, y + 24)
+        addHideableChild(ModGuiControls.createPriorityButton(new Position(x + 21, y + 24), getContainer()));
+
         this.filterLogicControl = addHideableChild(new ContentsFilterControl.Advanced(
                 screen,
-                new Position(x + 3, y + 24),
+                new Position(x + 3, y + 44),
                 getContainer().getFilterLogicContainer(),
                 Config.SERVER.advancedRestockUpgrade.slotsInRow.get(),
                 SBPButtonDefinitions.BACKPACK_CONTENTS_FILTER_TYPE

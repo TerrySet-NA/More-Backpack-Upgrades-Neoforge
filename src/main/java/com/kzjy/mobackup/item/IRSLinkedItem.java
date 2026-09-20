@@ -47,11 +47,6 @@ public interface IRSLinkedItem extends IMoBackupUpgrade {
                 CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
                     RSBridge.saveCoordinate(tag, pos, level.dimension());
                 });
-
-                ctx.getPlayer().displayClientMessage(
-                        Component.translatable("misc.refinedstorage.network_card.linked"), 
-                        true
-                );
             }
             return InteractionResult.SUCCESS;
         }
@@ -65,14 +60,13 @@ public interface IRSLinkedItem extends IMoBackupUpgrade {
 
         if (pos != null && dim != null) {
             tooltip.add(Component.translatable(
-                    "misc.refinedstorage.network_card.tooltip",
+                    "item.refinedstorage.network_item.bound_to",
                     pos.getX(),
                     pos.getY(),
-                    pos.getZ(),
-                    dim.location().toString()
+                    pos.getZ()
             ).withStyle(ChatFormatting.GRAY));
         } else {
-            tooltip.add(Component.translatable("misc.refinedstorage.network_card.not_found").withStyle(ChatFormatting.RED));
+            tooltip.add(Component.translatable("item.refinedstorage.network_item.unbound").withStyle(ChatFormatting.RED));
         }
     }
 }

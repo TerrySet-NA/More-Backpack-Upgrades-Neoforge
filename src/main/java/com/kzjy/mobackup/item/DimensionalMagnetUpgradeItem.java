@@ -46,10 +46,10 @@ public class DimensionalMagnetUpgradeItem extends MagnetUpgradeItem implements I
     }
 
     @Override
-	public List<UpgradeConflictDefinition> getUpgradeConflicts() {
-		return List.of(new UpgradeConflictDefinition(item -> item instanceof MagnetUpgradeItem, 0,
-				Component.translatable("gui.sophisticatedbackpacks.status.magnet_only_one_allowed")));
-	}
+    public List<UpgradeConflictDefinition> getUpgradeConflicts() {
+        return List.of(new UpgradeConflictDefinition(item -> item instanceof MagnetUpgradeItem, 0,
+                Component.translatable("gui.mobackup.status.magnet_only_one_allowed")));
+    }
 
     @Override
     public InteractionResult useOn(UseOnContext ctx) {

@@ -1,26 +1,24 @@
-/*
- * Copyright (C) 2026 TerrySet
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- */
-
 package com.kzjy.mobackup.core;
 
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nullable;
 
-// import org.slf4j.Logger;
-
-// import com.kzjy.mobackup.MoBackup;
-// import com.mojang.logging.LogUtils;
 import com.refinedmods.refinedstorage.api.network.Network;
-// import com.refinedmods.refinedstorage.api.network.impl.node.AbstractNetworkNode;
+import com.refinedmods.refinedstorage.api.network.energy.EnergyNetworkComponent;
+import com.refinedmods.refinedstorage.api.network.node.GraphNetworkComponent;
 import com.refinedmods.refinedstorage.api.network.node.NetworkNode;
 import com.refinedmods.refinedstorage.api.network.node.container.NetworkNodeContainer;
+import com.refinedmods.refinedstorage.api.network.security.Permission;
+import com.refinedmods.refinedstorage.api.network.security.SecurityActor;
+import com.refinedmods.refinedstorage.api.network.security.SecurityNetworkComponent;
+import com.refinedmods.refinedstorage.common.api.RefinedStorageApi;
+import com.refinedmods.refinedstorage.common.api.security.SecurityHelper;
 import com.refinedmods.refinedstorage.common.api.support.network.NetworkNodeContainerProvider;
+import com.refinedmods.refinedstorage.common.api.support.network.item.NetworkItemPlayerValidator;
 import com.refinedmods.refinedstorage.common.api.support.network.item.NetworkItemTargetBlockEntity;
-// import com.refinedmods.refinedstorage.common.support.network.AbstractBaseNetworkNodeContainerBlockEntity;
+import com.refinedmods.refinedstorage.common.security.BuiltinPermission;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -29,18 +27,27 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.Vec3;
 
-@SuppressWarnings("null")
 public class RSBridge {
 
     private static final String NBT_RECEIVER_X = "ReceiverX";
     private static final String NBT_RECEIVER_Y = "ReceiverY";
     private static final String NBT_RECEIVER_Z = "ReceiverZ";
     private static final String NBT_DIMENSION = "Dimension";
+    private static final int NETWORK_CACHE_TICKS = 20;
+
+    private record NetworkCacheKey(ResourceKey<Level> dim, BlockPos pos, @Nullable UUID playerUuid, @Nullable Permission perm) {}
+    private record CachedNetworkEntry(@Nullable Network network, long timestamp) {}
+    private static final Map<NetworkCacheKey, CachedNetworkEntry> CACHE_POOL = new ConcurrentHashMap<>();
+
+    private static final SecurityActor EMPTY_ACTOR = new SecurityActor() {};
 
     public static void saveCoordinate(ItemStack stack, Level level, BlockPos pos) {
         CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
@@ -74,9 +81,7 @@ public class RSBridge {
             CompoundTag tag = customData.copyTag();
             if (tag.contains(NBT_DIMENSION)) {
                 ResourceLocation name = ResourceLocation.tryParse(tag.getString(NBT_DIMENSION));
-                if (name != null) {
-                    return ResourceKey.create(Registries.DIMENSION, name);
-                }
+                if (name != null) return ResourceKey.create(Registries.DIMENSION, name);
             }
         }
         return null;
@@ -84,70 +89,123 @@ public class RSBridge {
 
     @Nullable
     public static Network getNetwork(Level level, ItemStack stack) {
-        if (level.isClientSide()) {
-            return null;
-        }
+        return getNetwork(level, stack, null, null);
+    }
+
+    @Nullable
+    public static Network getNetwork(Level level, ItemStack stack, @Nullable Player player) {
+        return getNetwork(level, stack, player, null);
+    }
+
+    @Nullable
+    public static Network getNetwork(Level level, ItemStack stack, @Nullable Player player, @Nullable Permission requiredPerm) {
+        if (level.isClientSide() || stack.isEmpty()) return null;
 
         BlockPos pos = getCoordinate(stack);
         ResourceKey<Level> dim = getDimension(stack);
+        if (pos == null || dim == null) return null;
 
-        if (pos == null || dim == null) {
-            // CustomData cd = stack.get(DataComponents.CUSTOM_DATA);
-            // MoBackup.LOGGER.warn("[MoBackup-Debug] RSBridge: 物品未綁定座標或 NBT 丟失！CustomData 內容: {}", (cd != null ? cd.copyTag() : "null"));
-            return null;
+        long gameTime = level.getGameTime();
+        UUID playerUuid = player != null ? player.getUUID() : null;
+        NetworkCacheKey cacheKey = new NetworkCacheKey(dim, pos, playerUuid, requiredPerm);
+
+        CachedNetworkEntry entry = CACHE_POOL.get(cacheKey);
+        if (entry != null && gameTime >= entry.timestamp() && (gameTime - entry.timestamp() < NETWORK_CACHE_TICKS)) {
+            return entry.network();
         }
 
-        if (level.getServer() == null) {
-            // MoBackup.LOGGER.warn("[MoBackup-Debug] RSBridge: Server 實例為 null");
-            return null;
+        Network resolvedNetwork = resolveAndValidateNetwork(level, dim, pos, player, requiredPerm);
+        if (resolvedNetwork != null) {
+            CACHE_POOL.put(cacheKey, new CachedNetworkEntry(resolvedNetwork, gameTime));
         }
 
-        ServerLevel serverLevel = level.getServer().getLevel(dim);
-        if (serverLevel == null) {
-            // MoBackup.LOGGER.warn("[MoBackup-Debug] RSBridge: 找不到目標維度 -> {}", dim.location());
-            return null;
+        if (CACHE_POOL.size() > 256) {
+            CACHE_POOL.entrySet().removeIf(e -> (gameTime - e.getValue().timestamp()) > 100);
         }
+        return resolvedNetwork;
+    }
 
-        if (!serverLevel.isLoaded(pos)) {
-            // MoBackup.LOGGER.warn("[MoBackup-Debug] RSBridge: 目標區塊未載入！pos: {}, dim: {}", pos, dim.location());
-            return null;
-        }
+    @Nullable
+    private static Network resolveAndValidateNetwork(Level level, ResourceKey<Level> dim, BlockPos pos, @Nullable Player player, @Nullable Permission requiredPerm) {
+        if (level.getServer() == null) return null;
+        ServerLevel targetLevel = level.getServer().getLevel(dim);
+        if (targetLevel == null || !targetLevel.isLoaded(pos)) return null;
 
-        Network network = getRsNetworkAt(serverLevel, pos);
-        if (network == null) {
-            // BlockEntity be = serverLevel.getBlockEntity(pos);
-            // MoBackup.LOGGER.warn("[MoBackup-Debug] RSBridge: 目標座標無效！BlockEntity: {}", (be != null ? be.getClass().getName() : "null (空氣或非方塊實體)"));
-        }
+        Network network = getRsNetworkAt(targetLevel, pos);
+        if (network == null || !isNetworkPowered(network)) return null;
+
+        // if (!isInWirelessRange(network, dim, pos)) {
+        //     return null;
+        // }
+
+        if (!hasPermission(network, player, requiredPerm)) return null;
         return network;
+    }
+
+    public static boolean validateClickedNetwork(@Nullable Network network, @Nullable Player player, @Nullable Permission requiredPerm) {
+        if (network == null || !isNetworkPowered(network)) return false;
+        return hasPermission(network, player, requiredPerm);
+    }
+
+    public static boolean isNetworkPowered(@Nullable Network network) {
+        if (network == null) return false;
+        if (!RefinedStorageApi.INSTANCE.isEnergyRequired()) return true;
+        EnergyNetworkComponent energy = network.getComponent(EnergyNetworkComponent.class);
+        return energy != null && energy.getStored() > 0;
+    }
+
+    public static boolean isInWirelessRange(@Nullable Network network, ResourceKey<Level> dim, BlockPos pos) {
+        if (network == null) return false;
+        NetworkItemPlayerValidator.PlayerCoordinates coordinates = new NetworkItemPlayerValidator.PlayerCoordinates(
+                dim, new Vec3(pos.getX(), pos.getY(), pos.getZ())
+        );
+        GraphNetworkComponent graph = network.getComponent(GraphNetworkComponent.class);
+        if (graph == null) return false;
+        return graph.getContainers(NetworkItemPlayerValidator.class).stream().anyMatch(validator -> validator.isValid(coordinates));
+    }
+
+    // =========================================================================
+    // 不提前截斷，直接進入 isAllowed 判定
+    // =========================================================================
+    public static boolean hasPermission(@Nullable Network network, @Nullable Player player, @Nullable Permission permission) {
+        if (network == null) return false;
+        if (permission == null) return true;
+
+        if (player instanceof ServerPlayer serverPlayer) {
+            return SecurityHelper.isAllowed(serverPlayer, permission, network);
+        }
+
+        // 當 player == null 時，直接進入 RS2 的 isAllowed 進行判定
+        SecurityNetworkComponent security = network.getComponent(SecurityNetworkComponent.class);
+        if (security != null) {
+            return security.isAllowed(permission, EMPTY_ACTOR);
+        }
+
+        return true;
+    }
+
+    public static boolean canInsert(@Nullable Network network, @Nullable Player player) {
+        return hasPermission(network, player, BuiltinPermission.INSERT);
+    }
+
+    public static boolean canExtract(@Nullable Network network, @Nullable Player player) {
+        return hasPermission(network, player, BuiltinPermission.EXTRACT);
     }
 
     @Nullable
     public static Network getRsNetworkAt(ServerLevel level, BlockPos pos) {
         BlockEntity be = level.getBlockEntity(pos);
-        if (be == null) {
-            return null;
-        }
-
-        // 1. 最精準：使用 RS 2.x 官方專門為卡片/物品遠端讀取設計的介面
+        if (be == null) return null;
         if (be instanceof NetworkItemTargetBlockEntity targetBe) {
             Network network = targetBe.getNetworkForItem();
-            if (network != null) {
-                // MoBackup.LOGGER.info("[MoBackup-Debug] RSBridge: 成功透過 NetworkItemTargetBlockEntity.getNetworkForItem() 取得 Network！");
-                return network;
-            }
+            if (network != null) return network;
         }
-
-        // 2. 後備：標準 NetworkNodeContainerProvider 容器遍歷
         if (be instanceof NetworkNodeContainerProvider provider) {
             for (NetworkNodeContainer container : provider.getContainers()) {
                 NetworkNode node = container.getNode();
-                if (node != null && node.getNetwork() != null) {
-                    return node.getNetwork();
-                }
+                if (node != null && node.getNetwork() != null) return node.getNetwork();
             }
         }
-
-        // MoBackup.LOGGER.warn("[MoBackup-Debug] RSBridge: 座標 {} 上的方塊 ({}) 回傳 Network 為 null (請確認方塊是否通電且連至控制器)！", pos, be.getClass().getSimpleName());
         return null;
     }
 }

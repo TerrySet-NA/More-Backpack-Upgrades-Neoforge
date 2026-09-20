@@ -1,49 +1,48 @@
-/*
- * Copyright (C) 2026 TerrySet
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- */
-
 package com.kzjy.mobackup.wrapper;
 
-// import com.kzjy.mobackup.MoBackup;
-// import com.kzjy.mobackup.MoBackup;
+import java.util.List;
+import java.util.function.Consumer;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import com.kzjy.mobackup.core.PickupContext;
 import com.kzjy.mobackup.core.RSBridge;
+import com.kzjy.mobackup.mixin.ItemEntityAccessor;
 import com.kzjy.mobackup.upgrade.IPriorityRoutingUpgrade;
 import com.refinedmods.refinedstorage.api.core.Action;
 import com.refinedmods.refinedstorage.api.network.Network;
 import com.refinedmods.refinedstorage.api.network.storage.StorageNetworkComponent;
 import com.refinedmods.refinedstorage.api.storage.Actor;
+import com.refinedmods.refinedstorage.common.api.storage.PlayerActor;
+import com.refinedmods.refinedstorage.common.security.BuiltinPermission;
 import com.refinedmods.refinedstorage.common.support.resource.ItemResource;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.stats.Stats;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
 import net.p3pp3rf1y.sophisticatedcore.api.IStorageWrapper;
 import net.p3pp3rf1y.sophisticatedcore.init.ModFluids;
 import net.p3pp3rf1y.sophisticatedcore.inventory.IItemHandlerSimpleInserter;
+import net.p3pp3rf1y.sophisticatedcore.upgrades.magnet.MagnetUpgradeItem;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.magnet.MagnetUpgradeWrapper;
 import net.p3pp3rf1y.sophisticatedcore.util.XpHelper;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.List;
-import java.util.function.Consumer;
-
-@SuppressWarnings("null")
 public class DimensionalMagnetUpgradeWrapper extends MagnetUpgradeWrapper implements IPriorityRoutingUpgrade {
 
     private static final String PREVENT_REMOTE_MOVEMENT = "PreventRemoteMovement";
@@ -51,59 +50,88 @@ public class DimensionalMagnetUpgradeWrapper extends MagnetUpgradeWrapper implem
     private static final int COOLDOWN_TICKS = 10;
     private static final int FULL_COOLDOWN_TICKS = 40;
 
-
-    public DimensionalMagnetUpgradeWrapper(IStorageWrapper storageWrapper, ItemStack upgrade,
-                                           Consumer<ItemStack> upgradeSaveHandler) {
+    public DimensionalMagnetUpgradeWrapper(IStorageWrapper storageWrapper, ItemStack upgrade, Consumer<ItemStack> upgradeSaveHandler) {
         super(storageWrapper, upgrade, upgradeSaveHandler);
     }
 
-    private Network cachedNetwork;
-    private long lastNetworkCheckTime = -1;
-    private static final int NETWORK_CHECK_INTERVAL = 20;
+    private Boolean networkFirstCache = null;
 
-    private Network getCachedNetwork(Level level) {
-        long gameTime = level.getGameTime();
-        if (cachedNetwork == null || lastNetworkCheckTime < 0
-                || gameTime - lastNetworkCheckTime >= NETWORK_CHECK_INTERVAL) {
-            lastNetworkCheckTime = gameTime;
-            ItemStack currentStack = getUpgradeStack();
-            cachedNetwork = RSBridge.getNetwork(level, currentStack);
-            // MoBackup.LOGGER.info("[MoBackup-Debug] 磁吸卡取得 RS 網路實例 -> {}", (cachedNetwork != null ? "【成功】" : "【失敗: null】"));
+    @Override
+    public boolean isNetworkFirst() {
+        if (networkFirstCache == null) {
+            CustomData customData = upgrade.get(DataComponents.CUSTOM_DATA);
+            if (customData != null && customData.contains(TAG_NETWORK_FIRST)) {
+                networkFirstCache = customData.copyTag().getBoolean(TAG_NETWORK_FIRST);
+            } else {
+                networkFirstCache = true;
+            }
         }
-        return cachedNetwork;
+        return networkFirstCache;
     }
 
     @Override
-    public void tick(@Nullable Entity entity, Level world, BlockPos pos) {
-        if (isInCooldown(world)) {
+    public void setNetworkFirst(boolean networkFirst) {
+        this.networkFirstCache = networkFirst;
+        CustomData.update(DataComponents.CUSTOM_DATA, upgrade, tag -> {
+            tag.putBoolean(TAG_NETWORK_FIRST, networkFirst);
+        });
+        save();
+    }
+
+    @Override
+    public void tick(@Nullable Entity entity, Level level, BlockPos pos) {
+        if (level.isClientSide()) {
             return;
         }
 
-        int cooldown = shouldPickupItems() ? pickupItemsCustom(entity, world, pos) : FULL_COOLDOWN_TICKS;
-
-        if (shouldPickupXp() && canFillStorageWithXpCustom()) {
-            cooldown = Math.min(cooldown, pickupXpOrbsCustom(entity, world, pos));
+        if (isInCooldownCustom(level, entity)) {
+            return;
         }
 
-        setCooldown(world, cooldown);
+        int cooldown = shouldPickupItems() ? pickupItems(entity, level, pos) : COOLDOWN_TICKS;
+
+        if (shouldPickupXp() && canFillStorageWithXpCustom()) {
+            cooldown = Math.min(cooldown, pickupXpOrbsCustom(entity, level, pos));
+        }
+
+        if (!(entity instanceof Player)) {
+            setCooldown(level, cooldown);
+        }
+    }
+
+    private static long nextTickTime = Long.MIN_VALUE;
+
+    private boolean isInCooldownCustom(Level level, @Nullable Entity entity) {
+        if (!(entity instanceof Player)) {
+            return super.isInCooldown(level);
+        }
+
+        long gameTime = level.getGameTime();
+        if (gameTime > nextTickTime) {
+            nextTickTime = gameTime + COOLDOWN_TICKS;
+        }
+        return nextTickTime > gameTime;
     }
 
     private boolean canFillStorageWithXpCustom() {
-        return storageWrapper.getFluidHandler().map(fluidHandler -> 
-            fluidHandler.fill(new FluidStack(ModFluids.XP_STILL.get(), 1), IFluidHandler.FluidAction.SIMULATE) > 0
+        return storageWrapper.getFluidHandler().map(fluidHandler ->
+                fluidHandler.fill(ModFluids.EXPERIENCE_TAG, 1, (Fluid) ModFluids.XP_STILL.get(), FluidAction.SIMULATE) > 0
         ).orElse(false);
     }
 
-    private int pickupXpOrbsCustom(@Nullable Entity entity, Level world, BlockPos pos) {
-        List<ExperienceOrb> xpEntities = world.getEntitiesOfClass(ExperienceOrb.class,
-                new AABB(pos).inflate(upgradeItem.getRadius()), e -> true);
+    private int pickupXpOrbsCustom(@Nullable Entity entity, Level level, BlockPos pos) {
+        List<ExperienceOrb> xpEntities = level.getEntitiesOfClass(
+                ExperienceOrb.class,
+                new AABB(pos).inflate(((MagnetUpgradeItem) this.upgradeItem).getRadius()),
+                e -> true
+        );
         if (xpEntities.isEmpty()) {
             return COOLDOWN_TICKS;
         }
 
         int cooldown = COOLDOWN_TICKS;
         for (ExperienceOrb xpOrb : xpEntities) {
-            if (xpOrb.isAlive() && !canNotPickupCustom(xpOrb, entity) && !tryToFillTankCustom(xpOrb, entity, world)) {
+            if (xpOrb.isAlive() && !canNotPickupCustom(xpOrb, entity) && !tryToFillTankCustom(xpOrb, entity, level)) {
                 cooldown = FULL_COOLDOWN_TICKS;
                 break;
             }
@@ -111,27 +139,22 @@ public class DimensionalMagnetUpgradeWrapper extends MagnetUpgradeWrapper implem
         return cooldown;
     }
 
-    private boolean tryToFillTankCustom(ExperienceOrb xpOrb, @Nullable Entity entity, Level world) {
-        int amountToTransfer = XpHelper.experienceToLiquid(xpOrb.getValue());
-
+    private boolean tryToFillTankCustom(ExperienceOrb xpOrb, @Nullable Entity entity, Level level) {
+        int amountToTransfer = XpHelper.experienceToLiquid((float) xpOrb.getValue());
         return storageWrapper.getFluidHandler().map(fluidHandler -> {
-            int amountAdded = fluidHandler.fill(
-                new FluidStack(ModFluids.XP_STILL.get(), amountToTransfer),
-                IFluidHandler.FluidAction.EXECUTE
-            );
-
+            int amountAdded = fluidHandler.fill(ModFluids.EXPERIENCE_TAG, amountToTransfer, (Fluid) ModFluids.XP_STILL.get(), FluidAction.EXECUTE);
             if (amountAdded > 0) {
                 Vec3 pos = xpOrb.position();
                 xpOrb.value = 0;
                 xpOrb.discard();
 
-                if (entity instanceof Player player) {
-                    playXpPickupSound(world, player);
+                Player player = entity instanceof Player p ? p : null;
+                if (player != null) {
+                    playXpPickupSound(level, player);
                 }
 
                 if (amountToTransfer > amountAdded) {
-                    world.addFreshEntity(new ExperienceOrb(world, pos.x(), pos.y(), pos.z(),
-                            (int) XpHelper.liquidToExperience(amountToTransfer - amountAdded)));
+                    level.addFreshEntity(new ExperienceOrb(level, pos.x(), pos.y(), pos.z(), (int) XpHelper.liquidToExperience(amountToTransfer - amountAdded)));
                 }
                 return true;
             }
@@ -139,29 +162,30 @@ public class DimensionalMagnetUpgradeWrapper extends MagnetUpgradeWrapper implem
         }).orElse(false);
     }
 
-    private int pickupItemsCustom(@Nullable Entity entity, Level world, BlockPos pos) {
-        List<ItemEntity> itemEntities = world.getEntitiesOfClass(ItemEntity.class,
-                new AABB(pos).inflate(upgradeItem.getRadius()), e -> true);
+    private int pickupItems(@Nullable Entity entity, Level level, BlockPos pos) {
+        List<ItemEntity> itemEntities = level.getEntitiesOfClass(
+                ItemEntity.class,
+                (new AABB(pos)).inflate((double) ((MagnetUpgradeItem) this.upgradeItem).getRadius()),
+                (e) -> true
+        );
         if (itemEntities.isEmpty()) {
             return COOLDOWN_TICKS;
-        }
+        } else {
+            Player player = entity instanceof Player p ? p : null;
+            int cooldown = FULL_COOLDOWN_TICKS;
 
-        Player player = entity instanceof Player ? (Player) entity : null;
-
-        int cooldown = FULL_COOLDOWN_TICKS;
-        for (ItemEntity itemEntity : itemEntities) {
-            if (!itemEntity.isAlive() || !getFilterLogic().matchesFilter(itemEntity.getItem())
-                    || canNotPickupCustom(itemEntity, entity)) {
-                continue;
-            }
-            if (tryToInsertItemCustom(itemEntity, world, player)) {
-                if (player != null) {
-                    playItemPickupSound(world, player);
+            for (ItemEntity itemEntity : itemEntities) {
+                int delay = ((ItemEntityAccessor) itemEntity).mobackup$getPickupDelay();
+                if (itemEntity.isAlive() && delay != 32767 && this.getFilterLogic().matchesFilter(itemEntity.getItem())
+                        && !this.canNotPickupCustom(itemEntity, entity) && this.tryToInsertItemCustom(player, itemEntity, level)) {
+                    if (player != null) {
+                        playItemPickupSound(level, player);
+                    }
+                    cooldown = COOLDOWN_TICKS;
                 }
-                cooldown = COOLDOWN_TICKS;
             }
+            return cooldown;
         }
-        return cooldown;
     }
 
     private boolean canNotPickupCustom(Entity pickedUpEntity, @Nullable Entity entity) {
@@ -170,23 +194,109 @@ public class DimensionalMagnetUpgradeWrapper extends MagnetUpgradeWrapper implem
                 : data.contains(PREVENT_REMOTE_MOVEMENT) && !data.contains(ALLOW_MACHINE_MOVEMENT);
     }
 
+    private boolean tryToInsertItemCustom(@Nullable Player player, ItemEntity itemEntity, Level level) {
+        ItemStack stack = itemEntity.getItem();
+        if (stack.isEmpty()) {
+            return false;
+        }
+
+        int originalCount = stack.getCount();
+        Item item = stack.getItem();
+        boolean networkFirst = isNetworkFirst();
+
+        if (networkFirst) {
+            // === 模式 A：RS 網路優先 ===
+            Network network = RSBridge.getNetwork(level, getUpgradeStack(), player, BuiltinPermission.INSERT);
+            if (network != null && RSBridge.canInsert(network, player)) {
+                ItemStack remaining = insertIntoRsNetwork(network, stack, false, player);
+                if (remaining.isEmpty()) {
+                    itemEntity.setItem(ItemStack.EMPTY);
+                    itemEntity.discard();
+                    if (player != null) {
+                        player.awardStat(Stats.ITEM_PICKED_UP.get(item), originalCount);
+                    }
+                    return true;
+                }
+                stack = remaining;
+                itemEntity.setItem(stack);
+            }
+
+            IItemHandlerSimpleInserter inventory = storageWrapper.getInventoryForUpgradeProcessing();
+            ItemStack remaining = inventory.insertItem(stack, false);
+            itemEntity.setItem(remaining);
+
+            int inserted = originalCount - remaining.getCount();
+            if (inserted > 0) {
+                if (remaining.isEmpty()) {
+                    itemEntity.discard();
+                }
+                if (player != null) {
+                    player.awardStat(Stats.ITEM_PICKED_UP.get(item), inserted);
+                }
+                return true;
+            }
+            return false;
+
+        } else {
+            // === 模式 B：背包優先 ===
+            IItemHandlerSimpleInserter inventory = storageWrapper.getInventoryForUpgradeProcessing();
+            ItemStack remaining = inventory.insertItem(stack, false);
+            if (remaining.isEmpty()) {
+                itemEntity.setItem(ItemStack.EMPTY);
+                itemEntity.discard();
+                if (player != null) {
+                    player.awardStat(Stats.ITEM_PICKED_UP.get(item), originalCount);
+                }
+                return true;
+            }
+
+            itemEntity.setItem(remaining);
+            Network network = RSBridge.getNetwork(level, getUpgradeStack(), player, BuiltinPermission.INSERT);
+            if (network != null && RSBridge.canInsert(network, player)) {
+                ItemStack afterRs = insertIntoRsNetwork(network, remaining, false, player);
+                itemEntity.setItem(afterRs);
+                if (afterRs.isEmpty()) {
+                    itemEntity.discard();
+                    if (player != null) {
+                        player.awardStat(Stats.ITEM_PICKED_UP.get(item), originalCount);
+                    }
+                    return true;
+                }
+            }
+
+            int totalInserted = originalCount - itemEntity.getItem().getCount();
+            if (totalInserted > 0) {
+                if (player != null) {
+                    player.awardStat(Stats.ITEM_PICKED_UP.get(item), totalInserted);
+                }
+                return true;
+            }
+            return false;
+        }
+    }
+
+    /**
+     * 封裝 RS 寫入（加入 canInsert 審核防穿透，並綁定 PlayerActor）
+     */
     private ItemStack insertIntoRsNetwork(Network network, ItemStack stack, boolean simulate, @Nullable Player player) {
         if (network == null || stack.isEmpty()) {
             return stack;
         }
 
+        if (!RSBridge.canInsert(network, player)) {
+            return stack;
+        }
+
         StorageNetworkComponent storage = network.getComponent(StorageNetworkComponent.class);
         if (storage == null) {
-            // MoBackup.LOGGER.warn("[MoBackup-Debug] RS 網路缺乏 StorageNetworkComponent 模組");
             return stack;
         }
 
         ItemResource resource = ItemResource.ofItemStack(stack);
         Action action = simulate ? Action.SIMULATE : Action.EXECUTE;
+        Actor actor = player != null ? new PlayerActor(player) : Actor.EMPTY;
 
-        long inserted = storage.insert(resource, stack.getCount(), action, Actor.EMPTY);
-        // MoBackup.LOGGER.info("[MoBackup-Debug] RS storage.insert 回傳寫入數量: {}", inserted);
-
+        long inserted = storage.insert(resource, stack.getCount(), action, actor);
         if (inserted <= 0) {
             return stack;
         }
@@ -199,124 +309,43 @@ public class DimensionalMagnetUpgradeWrapper extends MagnetUpgradeWrapper implem
         return stack.copyWithCount(remainingCount);
     }
 
-    private static void playItemPickupSound(Level world, @Nonnull Player player) {
-        world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS,
-                0.2F, (world.random.nextFloat() - world.random.nextFloat()) * 1.4F + 2.0F);
-    }
-
-    private static void playXpPickupSound(Level world, @Nonnull Player player) {
-        world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.EXPERIENCE_ORB_PICKUP,
-                SoundSource.PLAYERS, 0.1F, (world.random.nextFloat() - world.random.nextFloat()) * 0.35F + 0.9F);
-    }
-
-    private Boolean networkFirstCache = null;
-
-    public boolean isNetworkFirst() {
-        if (networkFirstCache == null) {
-            net.minecraft.world.item.component.CustomData customData = upgrade.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
-            if (customData != null && customData.contains("PriorityNetwork")) {
-                networkFirstCache = customData.copyTag().getBoolean("PriorityNetwork");
-            } else {
-                networkFirstCache = true; // 預設：網路優先
-            }
-        }
-        return networkFirstCache;
-    }
-
-    public void setNetworkFirst(boolean networkFirst) {
-        this.networkFirstCache = networkFirst;
-        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, upgrade, tag -> {
-            tag.putBoolean("PriorityNetwork", networkFirst);
-        });
-        save();
-        // MoBackup.LOGGER.info("[MoBackup-Debug] 磁吸卡優先級已更新為: {}", networkFirst ? "【RS 網路優先】" : "【精妙背包優先】");
-    }
-
-    private boolean tryToInsertItemCustom(ItemEntity itemEntity, Level world, @Nullable Player player) {
-        ItemStack stack = itemEntity.getItem();
-        int originalCount = stack.getCount();
-        boolean networkFirst = isNetworkFirst();
-
-        if (networkFirst) {
-            // === 模式 A：網路優先 (RS -> 背包) ===
-            Network network = getCachedNetwork(world);
-            if (network != null) {
-                ItemStack remaining = insertIntoRsNetwork(network, stack, false, player);
-                if (remaining.isEmpty()) {
-                    itemEntity.setItem(ItemStack.EMPTY);
-                    itemEntity.discard();
-                    return true;
-                }
-                stack = remaining;
-                itemEntity.setItem(stack);
-            }
-            return insertIntoBackpack(itemEntity, stack);
-        } else {
-            // === 模式 B：背包優先 (背包 -> RS 溢出) ===
-            IItemHandlerSimpleInserter inventory = storageWrapper.getInventoryForUpgradeProcessing();
-            ItemStack remaining = inventory.insertItem(stack, false);
-            if (remaining.isEmpty()) {
-                itemEntity.setItem(ItemStack.EMPTY);
-                itemEntity.discard();
-                return true;
-            }
-
-            // 背包塞滿後的溢出物資，自動存入 RS 網路
-            itemEntity.setItem(remaining);
-            Network network = getCachedNetwork(world);
-            if (network != null) {
-                ItemStack afterRs = insertIntoRsNetwork(network, remaining, false, player);
-                itemEntity.setItem(afterRs);
-                if (afterRs.isEmpty()) {
-                    itemEntity.discard();
-                    return true;
-                }
-            }
-            return remaining.getCount() < originalCount;
-        }
-    }
-
-    private boolean insertIntoBackpack(ItemEntity itemEntity, ItemStack stack) {
-        IItemHandlerSimpleInserter inventory = storageWrapper.getInventoryForUpgradeProcessing();
-        ItemStack remaining = inventory.insertItem(stack, true);
-        if (remaining.getCount() != stack.getCount()) {
-            remaining = inventory.insertItem(stack, false);
-            itemEntity.setItem(remaining);
-            if (remaining.isEmpty()) {
-                itemEntity.discard();
-            }
-            return true;
-        }
-        return false;
-    }
-
     @Override
-    public ItemStack pickup(Level world, ItemStack stack, boolean simulate) {
+    public ItemStack pickup(Level level, ItemStack stack, boolean simulate) {
         if (!shouldPickupItems() || !getFilterLogic().matchesFilter(stack)) {
             return stack;
         }
 
+        Player player = PickupContext.current();
+
         if (isNetworkFirst()) {
-            // 網路優先：先 RS，後背包
-            Network network = getCachedNetwork(world);
-            if (network != null) {
-                stack = insertIntoRsNetwork(network, stack, simulate, null);
+            Network network = RSBridge.getNetwork(level, getUpgradeStack(), player, BuiltinPermission.INSERT);
+            if (network != null && RSBridge.canInsert(network, player)) {
+                stack = insertIntoRsNetwork(network, stack, simulate, player);
                 if (stack.isEmpty()) {
                     return ItemStack.EMPTY;
                 }
             }
             return storageWrapper.getInventoryForUpgradeProcessing().insertItem(stack, simulate);
         } else {
-            // 背包優先：先背包，後 RS
             stack = storageWrapper.getInventoryForUpgradeProcessing().insertItem(stack, simulate);
             if (stack.isEmpty()) {
                 return ItemStack.EMPTY;
             }
-            Network network = getCachedNetwork(world);
-            if (network != null) {
-                stack = insertIntoRsNetwork(network, stack, simulate, null);
+            Network network = RSBridge.getNetwork(level, getUpgradeStack(), player, BuiltinPermission.INSERT);
+            if (network != null && RSBridge.canInsert(network, player)) {
+                stack = insertIntoRsNetwork(network, stack, simulate, player);
             }
             return stack;
         }
+    }
+
+    private static void playItemPickupSound(Level level, @Nonnull Player player) {
+        level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS,
+                0.2F, (level.random.nextFloat() - level.random.nextFloat()) * 1.4F + 2.0F);
+    }
+
+    private static void playXpPickupSound(Level level, @Nonnull Player player) {
+        level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.EXPERIENCE_ORB_PICKUP,
+                SoundSource.PLAYERS, 0.1F, (level.random.nextFloat() - level.random.nextFloat()) * 0.35F + 0.9F);
     }
 }

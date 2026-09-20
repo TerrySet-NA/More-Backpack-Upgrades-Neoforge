@@ -1,11 +1,3 @@
-/*
- * Copyright (C) 2026 TerrySet
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- */
-
 package com.kzjy.mobackup.client.gui;
 
 import com.kzjy.mobackup.mixin.FluidFilterControlInvoker;
@@ -25,7 +17,6 @@ import net.p3pp3rf1y.sophisticatedcore.upgrades.pump.PumpUpgradeTab;
 import static net.p3pp3rf1y.sophisticatedcore.client.gui.controls.ButtonDefinitions.createToggleButtonDefinition;
 import static net.p3pp3rf1y.sophisticatedcore.client.gui.controls.ButtonDefinitions.getBooleanStateData;
 
-@SuppressWarnings("null")
 public class DimensionalPumpUpgradeTab extends PumpUpgradeTab {
 
     private static final ButtonDefinition.Toggle<Boolean> INTERACT_WITH_FLUID_HANDLERS = createToggleButtonDefinition(getBooleanStateData(
@@ -57,27 +48,27 @@ public class DimensionalPumpUpgradeTab extends PumpUpgradeTab {
                 Component.translatable("gui.mobackup.upgrade.dimensional_pump"),
                 Component.translatable("gui.mobackup.upgrade.dimensional_pump.tooltip"));
 
-        // 按鈕 1: IS_INPUT 已由父類 super 註冊 (x + 3, y + 24)
-        // 按鈕 2: 容器/管道互動 (x + 21, y + 24)
-        addHideableChild(new ToggleButton<>(new Position(x + 21, y + 24), INTERACT_WITH_FLUID_HANDLERS,
+        // 按鈕 1: IS_INPUT 已由父類 super 註冊在 (x + 3, y + 24)
+        // 按鈕 2: 優先級切換按鈕放在 (x + 21, y + 24)
+        addHideableChild(ModGuiControls.createPriorityButton(new Position(x + 21, y + 24), getContainer()));
+
+        // 按鈕 3: 容器/管道互動 (x + 3, y + 44)
+        addHideableChild(new ToggleButton<>(new Position(x + 3, y + 44), INTERACT_WITH_FLUID_HANDLERS,
                 button -> getContainer().setInteractWithFluidHandlers(!getContainer().shouldInteractWithFluidHandlers()),
                 () -> getContainer().shouldInteractWithFluidHandlers()));
 
-        // 按鈕 3: 世界方塊互動 (x + 39, y + 24)
-        addHideableChild(new ToggleButton<>(new Position(x + 39, y + 24), INTERACT_WITH_WORLD,
+        // 按鈕 4: 世界方塊互動 (x + 21, y + 44)
+        addHideableChild(new ToggleButton<>(new Position(x + 21, y + 44), INTERACT_WITH_WORLD,
                 button -> getContainer().setInteractWithWorld(!getContainer().shouldInteractWithWorld()),
                 () -> getContainer().shouldInteractWithWorld()));
 
-        // 按鈕 4: 玩家手持互動 (x + 57, y + 24)
-        addHideableChild(new ToggleButton<>(new Position(x + 57, y + 24), INTERACT_WITH_HAND,
+        // 按鈕 5: 玩家手持互動 (x + 39, y + 44)
+        addHideableChild(new ToggleButton<>(new Position(x + 39, y + 44), INTERACT_WITH_HAND,
                 button -> getContainer().setInteractWithHand(!getContainer().shouldInteractWithHand()),
                 () -> getContainer().shouldInteractWithHand()));
 
-        // 按鈕 5: 共用優先級切換按鈕 (x + 75, y + 24)
-        addHideableChild(ModGuiControls.createPriorityButton(new Position(x + 75, y + 24), getContainer()));
-
-        // 下方流體過濾槽 (y + 44) - 透過 Mixin Invoker 原生構建
-        fluidFilterControl = FluidFilterControlInvoker.callInit(new Position(x + 3, y + 44), getContainer().getFluidFilterContainer());
+        // 下方流體過濾槽 (y + 64)
+        fluidFilterControl = FluidFilterControlInvoker.callInit(new Position(x + 3, y + 64), getContainer().getFluidFilterContainer());
         addHideableChild(fluidFilterControl);
     }
 }

@@ -1,22 +1,18 @@
-/*
- * Copyright (C) 2026 TerrySet
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- */
-
 package com.kzjy.mobackup.wrapper;
+
+import java.util.function.Consumer;
+
+import javax.annotation.Nullable;
 
 import com.kzjy.mobackup.core.PickupContext;
 import com.kzjy.mobackup.core.RSBridge;
-import com.kzjy.mobackup.item.DimensionalMagnetUpgradeItem;
 import com.kzjy.mobackup.upgrade.IPriorityRoutingUpgrade;
 import com.refinedmods.refinedstorage.api.core.Action;
 import com.refinedmods.refinedstorage.api.network.Network;
 import com.refinedmods.refinedstorage.api.network.storage.StorageNetworkComponent;
 import com.refinedmods.refinedstorage.api.storage.Actor;
 import com.refinedmods.refinedstorage.common.api.storage.PlayerActor;
+import com.refinedmods.refinedstorage.common.security.BuiltinPermission;
 import com.refinedmods.refinedstorage.common.support.resource.ItemResource;
 
 import net.minecraft.core.component.DataComponents;
@@ -27,14 +23,6 @@ import net.minecraft.world.level.Level;
 import net.p3pp3rf1y.sophisticatedcore.api.IStorageWrapper;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.pickup.PickupUpgradeWrapper;
 
-import javax.annotation.Nullable;
-import java.util.function.Consumer;
-
-/**
- * 次元拾取升級的邏輯實現 (MC 1.21.1 / RS 2.x)
- * 支援透過 IPriorityRoutingUpgrade 切換【網路優先】與【背包優先】雙向路由
- */
-@SuppressWarnings("null")
 public class DimensionalPickupUpgradeWrapper extends PickupUpgradeWrapper implements IPriorityRoutingUpgrade {
 
     public DimensionalPickupUpgradeWrapper(IStorageWrapper storageWrapper, ItemStack upgrade,
@@ -42,19 +30,9 @@ public class DimensionalPickupUpgradeWrapper extends PickupUpgradeWrapper implem
         super(storageWrapper, upgrade, upgradeSaveHandler);
     }
 
-    private Network cachedNetwork;
-    private long lastNetworkCheckTime = -1;
-    private static final int NETWORK_CHECK_INTERVAL = 20;
-
-    private Network getCachedNetwork(Level level) {
-        long gameTime = level.getGameTime();
-        if (cachedNetwork == null || lastNetworkCheckTime < 0
-                || gameTime - lastNetworkCheckTime >= NETWORK_CHECK_INTERVAL) {
-            lastNetworkCheckTime = gameTime;
-            cachedNetwork = RSBridge.getNetwork(level, getUpgradeStack());
-        }
-        return cachedNetwork;
-    }
+    // =========================================================================
+    // 優先級狀態持久化
+    // =========================================================================
 
     private Boolean networkFirstCache = null;
 
@@ -80,40 +58,41 @@ public class DimensionalPickupUpgradeWrapper extends PickupUpgradeWrapper implem
         save();
     }
 
+    // =========================================================================
+    // 拾取核心調度（嚴格防穿透）
+    // =========================================================================
+
     @Override
     public ItemStack pickup(Level world, ItemStack stack, boolean simulate) {
         if (stack.isEmpty() || !getFilterLogic().matchesFilter(stack)) {
             return stack;
         }
 
-        // 背包已裝磁吸升級時，避免拾取升級重複路由到 RS
-        if (storageWrapper.getUpgradeHandler().hasUpgrade(DimensionalMagnetUpgradeItem.TYPE)) {
-            return storageWrapper.getInventoryForUpgradeProcessing().insertItem(stack, simulate);
-        }
-
+        // 獲取當前撿起物品的玩家身分
         Player playerCtx = PickupContext.current();
 
         if (isNetworkFirst()) {
-            // === 模式 A：網路優先 (RS -> 背包) ===
-            Network network = getCachedNetwork(world);
-            if (network != null) {
+            // === 模式 A：RS 網路優先 ===
+            // 🛡️ 嚴格權限核驗：若無權限，network 直接取回 null，杜絕穿透
+            Network network = RSBridge.getNetwork(world, getUpgradeStack(), playerCtx, BuiltinPermission.INSERT);
+            if (network != null && RSBridge.canInsert(network, playerCtx)) {
                 stack = insertIntoRsNetwork(network, stack, simulate, playerCtx);
                 if (stack.isEmpty()) {
-                    return ItemStack.EMPTY; // 全額寫入 RS
+                    return ItemStack.EMPTY;
                 }
             }
-            // RS 裝不下或未連線，剩餘物資降級存入背包
+            // RS 無權限、斷電、滿載或未連線，轉入隨身背包
             return storageWrapper.getInventoryForUpgradeProcessing().insertItem(stack, simulate);
         } else {
-            // === 模式 B：背包優先 (背包 -> RS 溢出) ===
+            // === 模式 B：背包優先 ===
             stack = storageWrapper.getInventoryForUpgradeProcessing().insertItem(stack, simulate);
             if (stack.isEmpty()) {
-                return ItemStack.EMPTY; // 全額存入背包
+                return ItemStack.EMPTY;
             }
 
-            // 背包滿了，溢出物資自動排入 RS 網路
-            Network network = getCachedNetwork(world);
-            if (network != null) {
+            // 背包滿了才進 RS，同樣受嚴格權限審查保護
+            Network network = RSBridge.getNetwork(world, getUpgradeStack(), playerCtx, BuiltinPermission.INSERT);
+            if (network != null && RSBridge.canInsert(network, playerCtx)) {
                 stack = insertIntoRsNetwork(network, stack, simulate, playerCtx);
             }
             return stack;
@@ -121,10 +100,15 @@ public class DimensionalPickupUpgradeWrapper extends PickupUpgradeWrapper implem
     }
 
     /**
-     * 封裝 RS 2.x 插入邏輯（支援模擬與真實寫入，並綁定玩家 Actor）
+     * 封裝 RS 插入邏輯
      */
     private ItemStack insertIntoRsNetwork(Network network, ItemStack stack, boolean simulate, @Nullable Player player) {
         if (network == null || stack.isEmpty()) {
+            return stack;
+        }
+
+        // 🛡️ 雙重防護：再次確認該玩家/機器是否有權限寫入
+        if (!RSBridge.canInsert(network, player)) {
             return stack;
         }
 

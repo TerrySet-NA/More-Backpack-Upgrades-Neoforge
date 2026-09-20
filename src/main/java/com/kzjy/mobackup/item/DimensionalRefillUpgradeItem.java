@@ -1,14 +1,5 @@
-/*
- * Copyright (C) 2026 TerrySet
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- */
-
 package com.kzjy.mobackup.item;
 
-// import com.kzjy.mobackup.MoBackup;
 import com.kzjy.mobackup.wrapper.DimensionalRefillUpgradeWrapper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
@@ -17,23 +8,17 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.p3pp3rf1y.sophisticatedbackpacks.Config;
-// import net.p3pp3rf1y.sophisticatedbackpacks.upgrades.mobcatcher.MobCatcherUpgradeItem;
 import net.p3pp3rf1y.sophisticatedbackpacks.upgrades.refill.RefillUpgradeItem;
 import net.p3pp3rf1y.sophisticatedbackpacks.upgrades.refill.RefillUpgradeWrapper;
-// import net.p3pp3rf1y.sophisticatedcore.api.IStorageWrapper;
-// import net.p3pp3rf1y.sophisticatedcore.common.gui.UpgradeSlotChangeResult;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.UpgradeType;
 
 import java.util.List;
-// import java.util.Set;
 
-@SuppressWarnings("null")
 public class DimensionalRefillUpgradeItem extends RefillUpgradeItem implements IRSLinkedItem {
     public static final UpgradeType<RefillUpgradeWrapper> TYPE = new UpgradeType<>(
             DimensionalRefillUpgradeWrapper::new);
 
     public DimensionalRefillUpgradeItem() {
-        // 啟用目標槽位自訂 (true) 與 中鍵選取方塊支援 (true)
         super(Config.SERVER.advancedRefillUpgrade.filterSlots::get, true, true);
     }
 
@@ -47,7 +32,7 @@ public class DimensionalRefillUpgradeItem extends RefillUpgradeItem implements I
         return List.of(new UpgradeConflictDefinition(
                 item -> item instanceof RefillUpgradeItem,
                 0,
-                Component.translatable("gui.sophisticatedbackpacks.status.refill_only_one_allowed")
+                Component.translatable("gui.mobackup.status.refill_only_one_allowed")
         ));
     }
 
