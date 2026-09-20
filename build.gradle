@@ -115,8 +115,8 @@ dependencies {
 
     // Mod 依賴 (移除 fg.deobf)
     implementation "curse.maven:refined-storage-243076:8211701"
-    implementation "curse.maven:sophisticated-core-618298:8503041"
-    implementation "curse.maven:sophisticated-backpacks-422301:8503096"
+    implementation "curse.maven:sophisticated-core-618298:8838842"
+    implementation "curse.maven:sophisticated-backpacks-422301:8845926"
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
