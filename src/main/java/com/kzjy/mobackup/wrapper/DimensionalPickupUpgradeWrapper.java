@@ -30,10 +30,6 @@ public class DimensionalPickupUpgradeWrapper extends PickupUpgradeWrapper implem
         super(storageWrapper, upgrade, upgradeSaveHandler);
     }
 
-    // =========================================================================
-    // 優先級狀態持久化
-    // =========================================================================
-
     private Boolean networkFirstCache = null;
 
     @Override
@@ -43,7 +39,7 @@ public class DimensionalPickupUpgradeWrapper extends PickupUpgradeWrapper implem
             if (customData != null && customData.contains(TAG_NETWORK_FIRST)) {
                 networkFirstCache = customData.copyTag().getBoolean(TAG_NETWORK_FIRST);
             } else {
-                networkFirstCache = true; // 預設：RS 網路優先
+                networkFirstCache = true;
             }
         }
         return networkFirstCache;
@@ -58,22 +54,15 @@ public class DimensionalPickupUpgradeWrapper extends PickupUpgradeWrapper implem
         save();
     }
 
-    // =========================================================================
-    // 拾取核心調度（嚴格防穿透）
-    // =========================================================================
-
     @Override
     public ItemStack pickup(Level world, ItemStack stack, boolean simulate) {
         if (stack.isEmpty() || !getFilterLogic().matchesFilter(stack)) {
             return stack;
         }
 
-        // 獲取當前撿起物品的玩家身分
         Player playerCtx = PickupContext.current();
 
         if (isNetworkFirst()) {
-            // === 模式 A：RS 網路優先 ===
-            // 🛡️ 嚴格權限核驗：若無權限，network 直接取回 null，杜絕穿透
             Network network = RSBridge.getNetwork(world, getUpgradeStack(), playerCtx, BuiltinPermission.INSERT);
             if (network != null && RSBridge.canInsert(network, playerCtx)) {
                 stack = insertIntoRsNetwork(network, stack, simulate, playerCtx);
@@ -81,16 +70,13 @@ public class DimensionalPickupUpgradeWrapper extends PickupUpgradeWrapper implem
                     return ItemStack.EMPTY;
                 }
             }
-            // RS 無權限、斷電、滿載或未連線，轉入隨身背包
             return storageWrapper.getInventoryForUpgradeProcessing().insertItem(stack, simulate);
         } else {
-            // === 模式 B：背包優先 ===
             stack = storageWrapper.getInventoryForUpgradeProcessing().insertItem(stack, simulate);
             if (stack.isEmpty()) {
                 return ItemStack.EMPTY;
             }
 
-            // 背包滿了才進 RS，同樣受嚴格權限審查保護
             Network network = RSBridge.getNetwork(world, getUpgradeStack(), playerCtx, BuiltinPermission.INSERT);
             if (network != null && RSBridge.canInsert(network, playerCtx)) {
                 stack = insertIntoRsNetwork(network, stack, simulate, playerCtx);
@@ -99,15 +85,11 @@ public class DimensionalPickupUpgradeWrapper extends PickupUpgradeWrapper implem
         }
     }
 
-    /**
-     * 封裝 RS 插入邏輯
-     */
     private ItemStack insertIntoRsNetwork(Network network, ItemStack stack, boolean simulate, @Nullable Player player) {
         if (network == null || stack.isEmpty()) {
             return stack;
         }
 
-        // 🛡️ 雙重防護：再次確認該玩家/機器是否有權限寫入
         if (!RSBridge.canInsert(network, player)) {
             return stack;
         }

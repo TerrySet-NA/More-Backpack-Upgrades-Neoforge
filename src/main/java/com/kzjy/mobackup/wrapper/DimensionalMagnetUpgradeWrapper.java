@@ -205,7 +205,6 @@ public class DimensionalMagnetUpgradeWrapper extends MagnetUpgradeWrapper implem
         boolean networkFirst = isNetworkFirst();
 
         if (networkFirst) {
-            // === 模式 A：RS 網路優先 ===
             Network network = RSBridge.getNetwork(level, getUpgradeStack(), player, BuiltinPermission.INSERT);
             if (network != null && RSBridge.canInsert(network, player)) {
                 ItemStack remaining = insertIntoRsNetwork(network, stack, false, player);
@@ -238,7 +237,6 @@ public class DimensionalMagnetUpgradeWrapper extends MagnetUpgradeWrapper implem
             return false;
 
         } else {
-            // === 模式 B：背包優先 ===
             IItemHandlerSimpleInserter inventory = storageWrapper.getInventoryForUpgradeProcessing();
             ItemStack remaining = inventory.insertItem(stack, false);
             if (remaining.isEmpty()) {
@@ -275,9 +273,6 @@ public class DimensionalMagnetUpgradeWrapper extends MagnetUpgradeWrapper implem
         }
     }
 
-    /**
-     * 封裝 RS 寫入（加入 canInsert 審核防穿透，並綁定 PlayerActor）
-     */
     private ItemStack insertIntoRsNetwork(Network network, ItemStack stack, boolean simulate, @Nullable Player player) {
         if (network == null || stack.isEmpty()) {
             return stack;
@@ -315,6 +310,7 @@ public class DimensionalMagnetUpgradeWrapper extends MagnetUpgradeWrapper implem
             return stack;
         }
 
+        // 🛡️ 一次性消費上下文
         Player player = PickupContext.current();
 
         if (isNetworkFirst()) {
