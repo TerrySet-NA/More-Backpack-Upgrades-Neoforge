@@ -1,0 +1,14 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "mobackup:item/network_pump_upgrade"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "mobackup:linked": 1.0
+      },
+      "model": "mobackup:item/network_pump_upgrade_active"
+    }
+  ]
+}

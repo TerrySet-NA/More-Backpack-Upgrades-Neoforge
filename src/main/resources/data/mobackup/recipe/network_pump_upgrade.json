@@ -1,0 +1,35 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "sophisticatedcore:item_enabled",
+      "itemRegistryName": "mobackup:network_pump_upgrade"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "ABA",
+    "CDC",
+    "AVA"
+  ],
+  "key": {
+    "A": {
+      "item": "minecraft:ender_eye"
+    },
+    "B": {
+      "item": "refinedstorage:controller"
+    },
+    "C": {
+      "item": "minecraft:dragon_breath"
+    },
+    "D": {
+      "item": "sophisticatedbackpacks:advanced_pump_upgrade"
+    },
+    "V": {
+      "item": "c:nether_stars"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "mobackup:network_pump_upgrade"
+  }
+}

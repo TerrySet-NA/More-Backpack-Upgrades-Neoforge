@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "mobackup:item/network_magnet_upgrade_active"
+  }
+}

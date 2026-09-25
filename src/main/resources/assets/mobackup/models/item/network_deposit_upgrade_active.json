@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "mobackup:item/network_deposit_upgrade_active"
+  }
+}

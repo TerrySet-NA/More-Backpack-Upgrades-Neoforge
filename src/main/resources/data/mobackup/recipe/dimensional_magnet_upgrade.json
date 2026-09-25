@@ -1,19 +1,31 @@
 {
+  "neoforge:conditions": [
+    {
+      "type": "sophisticatedcore:item_enabled",
+      "itemRegistryName": "mobackup:dimensional_magnet_upgrade"
+    }
+  ],
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "AAA",
-    "BCB",
-    "AAA"
+    "EIE",
+    "IPI",
+    "R L"
   ],
   "key": {
-    "A": {
-      "item": "minecraft:popped_chorus_fruit"
+    "E": {
+      "tag": "c:ender_pearls"
     },
-    "B": {
-      "item": "minecraft:gold_ingot"
+    "I": {
+      "tag": "c:ingots/iron"
     },
-    "C": {
+    "L": {
+      "tag": "c:gems/lapis"
+    },
+    "P": {
       "item": "mobackup:dimensional_pickup_upgrade"
+    },
+    "R": {
+      "tag": "c:dusts/redstone"
     }
   },
   "result": {

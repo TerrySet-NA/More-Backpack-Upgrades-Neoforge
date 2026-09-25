@@ -1,26 +1,19 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "ABA",
-    "CDC",
-    "AVA"
-  ],
-  "key": {
-    "A": {
-      "item": "minecraft:ender_eye"
-    },
-    "B": {
-      "item": "refinedstorage:controller"
-    },
-    "C": {
-      "item": "minecraft:dragon_breath"
-    },
-    "D": {
-      "item": "sophisticatedbackpacks:advanced_pickup_upgrade"
-    },
-    "V": {
-      "item": "minecraft:nether_star"
+  "neoforge:conditions": [
+    {
+      "type": "sophisticatedcore:item_enabled",
+      "itemRegistryName": "mobackup:dimensional_pickup_upgrade"
     }
+  ],
+  "type": "minecraft:smithing_transform",
+  "template": {
+    "item": "minecraft:netherite_upgrade_smithing_template"
+  },
+  "base": {
+    "item": "mobackup:network_pickup_upgrade"
+  },
+  "addition": {
+    "item": "minecraft:netherite_ingot"
   },
   "result": {
     "count": 1,
