@@ -1,19 +1,26 @@
 {
-  "neoforge:conditions": [
-    {
-      "type": "sophisticatedcore:item_enabled",
-      "itemRegistryName": "mobackup:dimensional_feeding_upgrade"
-    }
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "ABA",
+    "CDC",
+    "AVA"
   ],
-  "type": "minecraft:smithing_transform",
-  "template": {
-    "item": "minecraft:netherite_upgrade_smithing_template"
-  },
-  "base": {
-    "item": "mobackup:network_feeding_upgrade"
-  },
-  "addition": {
-    "item": "minecraft:netherite_ingot"
+  "key": {
+    "A": {
+      "item": "minecraft:ender_eye"
+    },
+    "B": {
+      "item": "minecraft:netherite_ingot"
+    },
+    "C": {
+      "item": "minecraft:dragon_breath"
+    },
+    "D": {
+      "item": "mobackup:network_feeding_upgrade"
+    },
+    "V": {
+      "item": "minecraft:nether_star"
+    }
   },
   "result": {
     "count": 1,

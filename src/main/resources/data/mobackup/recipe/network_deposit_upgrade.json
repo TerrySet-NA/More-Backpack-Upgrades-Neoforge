@@ -1,32 +1,11 @@
 {
-  "neoforge:conditions": [
-    {
-      "type": "sophisticatedcore:item_enabled",
-      "itemRegistryName": "mobackup:network_deposit_upgrade"
-    }
-  ],
-  "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "ABA",
-    "CDC",
-    "AVA"
-  ],
-  "key": {
-    "A": {
-      "item": "minecraft:ender_eye"
-    },
-    "B": {
-      "item": "refinedstorage:controller"
-    },
-    "C": {
-      "item": "minecraft:dragon_breath"
-    },
-    "D": {
-      "item": "sophisticatedbackpacks:advanced_deposit_upgrade"
-    },
-    "V": {
-      "item": "c:nether_stars"
-    }
+  "type": "minecraft:smithing_transform",
+  "template": [],
+  "base": {
+    "item": "sophisticatedbackpacks:advanced_deposit_upgrade"
+  },
+  "addition": {
+    "item": "refinedstorage:controller"
   },
   "result": {
     "count": 1,
