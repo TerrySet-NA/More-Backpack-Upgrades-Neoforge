@@ -1,104 +1,179 @@
-# More Backpack Upgrades (更多背包升级)
+# More Backpack Upgrades (更多背包升級)
 
-More Backpack Upgrades is an addon for Sophisticated Backpacks that bridges the gap between your portable storage and your Refined Storage network.
+More Backpack Upgrades is an addon for Sophisticated Backpacks that seamlessly bridges the gap between your portable storage and your Refined Storage network.
 
-(更多背包升级 是 Sophisticated Backpacks (精妙背包) 的附属模组，它架起了你的便携背包与 Refined Storage (精致存储) 网络之间的桥梁。)
+(更多背包升級 是 Sophisticated Backpacks (精妙背包) 的擴展模組，為你的隨身背包與 Refined Storage (精緻存儲) 數位網路之間架起無縫連結的橋樑。)
 
-Forget about manually emptying your backpack after a mining trip. With these new upgrades, your items are teleported directly into your digital storage system, no matter where you are or across dimensions!
+Forget about manually emptying your backpack after a mining trip or running out of materials while building. With these upgrades, items and fluids can be directly routed into and out of your digital storage system!
 
-(忘掉每次挖矿归来都要手动清空背包的繁琐吧。有了这些全新的升级卡，无论你身处何地或跨越维度，物品都能直接传送进你的数字存储系统中！)
+(告別每次挖礦歸來手動倒背包、或是建築時材料不足的煩惱。裝備專屬升級卡後，物品與流體皆可直接與基地 RS 數位儲存系統即時雙向交互！)
 
-## ✨ Features (功能特性) 
-This mod adds eight powerful "Dimensional" upgrades. To link an upgrade to your network, simply Shift + Right-Click on a Refined Storage Controller with the upgrade item in hand.
+---
 
-(本模组添加了八种强大的“次元”升级卡。要将升级卡绑定到你的网络，只需手持升级卡对着 Refined Storage 的 控制器 (Controller) 按 Shift + 右键 即可。)
+## ⚡ Two-Tier System (雙階層升級體系)
 
-## ⚠️ General Upgrade Rules (通用升级规则)
-- **Strictly One per Type (同类型唯一):** Only one Dimensional Upgrade of each type can be installed in a single backpack.  
-  *(每个背包仅限安装一个同类型的次元升级。)*
-- **Tier Incompatibility (无法兼容下属版本):** Mutually exclusive with vanilla/standard counterparts and lower tiers (cannot install basic or advanced versions alongside the dimensional version).  
-  *(与该类型的原版升级及其下属低级版本互斥，无法同时共存安装。)*
+Each upgrade comes in two tiers to match your game progression:
 
-## 🧲 Dimensional Magnet Upgrade (次元磁吸升级)
+(每種升級均提供兩種位階，以契合不同的生存發展階段：)
 
-* **Function (功能):** Pulls items from the ground directly into your linked RS system.
-*(将地面上的掉落物直接吸入绑定的 RS 系统中。)*
-* **Smart Fallback & Priority (智能回退与优先级):** Features a priority toggle (RS Network First ⇄ Backpack First). If the RS network is full or offline, items will safely fall back to the backpack without loss.
-*(支持在 GUI 中一键切换【RS 网络优先】或【精妙背包优先】。当网络已满或离线时，会自动降级存入背包，防止物品丢失。)*
-* **Configurable (可配置):** Customizable range and advanced filter settings (whitelist/blacklist/backpack contents match).
-*(支持自定义吸附范围以及进阶过滤器设置（白名单/黑名单/背包匹配）。)*
+- **📶 Network Tier (網路升級):**
+  - **Range (範圍):** Requires coverage from a Refined Storage **Wireless Transmitter (無線發射器)**.
+    
+    *(必須身處基地的 Refined Storage 無線發射器訊號覆蓋範圍之內。)*
+    
+  - **Role (定位):** Mid-game wireless connectivity for base vicinity and resource management.
+    
+    *(中前期的基地周邊無線擴充方案。)*
 
-## 📥 Dimensional Pickup Upgrade (次元拾取升级)
 
-* **Function (功能):** Items you pick up normally (by walking over them) are instantly routed into your linked RS system.
-*(你正常拾取（走过）的物品会瞬间发送到绑定的 RS 系统中。)*
-* **Smart Fallback & Priority (智能回退与优先级):** Toggleable between RS Network First and Backpack First. When prioritizing RS, full networks route items to the backpack; when prioritizing backpack, overflow automatically streams back to RS.
-*(支持【RS 网络优先】与【背包优先】双向切换。网络优先时，溢出物品存入背包；背包优先时，背包塞满后的多余物资自动传送回 RS。)*
-* **Anti-Conflict (防冲突机制):** Automatically coordinates with the Dimensional Magnet Upgrade to prevent redundant processing.
-*(背包内同时安装磁吸升级时，会自动协同避免重复路由。)*
+- **🌌 Dimensional Tier (次元升級):**
+  - **Range (範圍):** **Unlimited range & Cross-dimensional**. Functions everywhere, even across different dimensions (Overworld, Nether, The End).
+    
+    *(**無限距離且支援跨維度**。無論身處主世界、地獄、終界皆能無延遲連線。)*
+    
+  - **Role (定位):** End-game upgrade crafted using Netherite.
+    
+    *(消耗下界合金等高階材料打造的終極升級。)*
 
-## 🍖 Dimensional Feeding Upgrade (次元喂食升级)
 
-* **Function (功能):** Automatically feeds the player by retrieving food directly from the linked RS network across dimensions.
-*(当饥饿度下降时，跨维度直接从绑定的 RS 网络中调取食物自动喂食玩家。)*
-* **Priority Routing (优先级路由):** Choose whether to consume food from the remote RS network first or from your backpack's local storage.
-*(可自由选择优先消耗远程 RS 网络中的储备粮，还是优先消耗随身背包中携带的食物。)*
-* **Configurable (可配置):** Set hunger thresholds, food filters, and feeding conditions.
-*(支持设置喂食饥饿度阈值、食物过滤器与自动进食策略。)*
 
-## 🔄 Dimensional Refill Upgrade (次元补货升级)
+---
 
-* **Function (功能):** Keeps target slots (such as torches, building blocks, ammunition, or tools) constantly restocked directly from the linked RS network.
-*(当主副手或快捷栏的物料（火把、建筑方块、箭矢等）消耗时，直接跨维度从绑定的 RS 网络补齐。)*
-* **Seamless Supply (无缝补给):** Never run out of building materials or arrows while exploring or constructing.
-*(探险或大型建筑时无需手动翻箱倒柜，随身物料时刻保持满额状态。)*
-* **Smart Priority (智能优先级):** Configurable to draw supplies from the remote RS network or local backpack first.
-*(支持自由切换优先从 RS 调货补齐，或是优先消耗背包内备用物资。)*
+## ⚠️ General Upgrade Rules (通用升級規則)
 
-## 📦 Dimensional Restock Upgrade (次元取货升级)
+- **Strictly One per Type (同類型唯一):** Only **one** upgrade of each function (whether Network or Dimensional) can be installed in a single backpack.
+  
+  *(同功能升級（無論是網路版或次元版）在單一背包內**僅限安裝一個**。)*
+  
+- **Tier Incompatibility (向下互斥):** Mutually exclusive with vanilla/standard counterparts and lower tiers (cannot install basic or advanced Sophisticated Backpacks upgrades alongside these).
+  
+  *(與精妙背包原版的基礎/進階對應升級互斥，無法重複安裝。)*
+  
+- **Smart Priority Routing (智慧優先級路由):** Features an interactive GUI toggle (**RS Network First ⇄ Backpack First**). If the prioritized storage is full or disconnected, items safely fall back to the secondary inventory without loss.
+  
+  *(所有升級介面均支援【RS 網路優先 ⇄ 精妙背包優先】一鍵切換。當優先目標已滿或離線時，自動回退防掉落，保證物資絕對安全。)*
+  
+- **In-World & Wearable Support (穿戴與實體方塊雙支援):** Upgrades function seamlessly whether the backpack is worn by a player or placed down as a block in the world.
+  
+  *(升級模組同時支援玩家隨身穿戴與放置在地上的背包方塊，放置在地時仍可精準進行無線範圍判定與運作。)*
+  
+- **Visual State Feedback (綁定狀態動態外觀):** Bound upgrades feature dynamic textures and models in your hand, inventory, and GUI tabs.
+  
+  *(升級卡在綁定 RS 控制器後，物品模型貼圖會動態切換為已連線發光狀態。)*
 
-* **Function (功能):** Takes items from target external containers (chests, machines) or non-linked RS networks with a single Shift-Right-Click.
-*(Shift+右键外部箱子、容器或非记录的 RS 网络时，快速提取目标物品。)*
+---
 
-## 🗳️ Dimensional Deposit Upgrade (次元卸货升级)
+## 🔗 How to Link (如何綁定)
 
-* **Function (功能):** Shift-Right-Click external containers or different RS networks to rapidly deposit filtered materials.
-*(Shift+右键外部容器或不同的 RS 网络时，快速卸下战利品与物资。)*
+1. Hold the Network or Dimensional upgrade in your main hand.
+   
+   *(將網路或次元升級卡拿在主手。)*
 
-## 🌊 Dimensional Pump Upgrade (次元液泵升级)
+2. **Shift + Right-Click** on a Refined Storage **Controller** (or connected target network node).
 
-* **Function (功能):** Pumps fluids into or dispenses fluids out of your linked RS network across dimensions (in-world sources, fluid pipes, tanks, or player hand items).
-*(直接在世界中抽吸/排放液体，与绑定的 RS 存储网络进行跨维度的流体交互（支持世界水源、储罐管道与手持容器）。)*
-* **Virtual Remote Tank (虚拟无限储罐):** Even if your backpack has **no tank upgrade installed**, the pump upgrade can utilize your entire RS network as a massive virtual fluid reservoir!
-*(即便随身背包**没有安装任何储罐升级**，也能直接把整套基地 RS 网络当成无限随身储罐直接抽水与倒水！)*
-* **Comprehensive Control (全方位模式控制):** Features in/out direction toggles, world/container/hand interaction switches, and RS-First vs Backpack-First fluid routing.
-*(完整继承官方抽入/排出方向、世界方块/手持容器/相邻储罐交互开关，并提供 RS 网络与随身储罐的优先级分流。)*
+   *(按住 **Shift + 右鍵** 點擊 Refined Storage 的**控制器 (Controller)** 或網路節點。)*
 
-## 🧪 Dimensional Alchemy Upgrade (次元炼金升级)
+3. The tooltip will update with the bound coordinate and dimension, and the item texture will change to its active linked state.
 
-* **Function (功能):** Automatically detects player or nearby entity states (such as low health, on fire, drowning, falling, mining, or suffering debuffs) and consumes potions, splash potions, golden apples, or milk directly from the linked RS network.
-*(智能监测玩家或周围实体的生理状态（残血、着火、溺水、坠落、挖掘、获得负面效果等），跨维度直接从绑定的 RS 网络中调取药水、喷溅药水、金苹果或牛奶自动使用。)*
-* **Zero Inventory Clutter (无损空瓶/铁桶回收):** When potions or milk are consumed, empty glass bottles and iron buckets are automatically recycled back into your linked RS network instead of cluttering your backpack.
-*(喝完药水或牛奶后产生的空玻璃瓶与铁桶会**优先自动回传至基地 RS 网络**，完全不占随身背包格子。)*
-* **Intelligent Priority (智能优先级):** Configurable to consume potions from the remote RS network first (freeing up backpack inventory slots) or from the backpack first.
-*(支持设置优先消耗远端 RS 网络的药水库存（身上无需携带任何沉重的药水瓶），亦可设置为优先消耗背包随身携带的消耗品。)*
+   *(升級卡 Tooltip 將顯示綁定座標與維度，且外觀貼圖會切換為已連線狀態。)*
 
-## 🛠️ Requirements (前置需求) 
-**To use this mod, you need the following installed (要使用此模组，你需要安装以下内容) :**
+---
 
-- **Minecraft 1.21.1 Neoforge**
-- **Sophisticated Backpacks**
-- **Sophisticated Core**
-- **Refined Storage**
+## 🛠️ Upgrades (8 款專屬升級列表)
 
-## 📝 Configuration (配置)
-**You can configure the range of the Dimensional Magnet Upgrade in the config file (你可以在配置文件中调整次元磁吸升级的范围) :**
-```
-config/MoreBackpackUpgrades-common.toml
-```
+### 🧲 Magnet Upgrade (網路 / 次元磁鐵升級)
+
+- **Function (功能):** Automatically vacuums ground item drops directly into your RS network.
+  
+  *(自動將周圍地面上的掉落物吸入連線的 RS 網路中。)*
+  
+- **Configurable (可配置):** Advanced filter controls (whitelist/blacklist/backpack contents match).
+  
+  *(支援進階過濾面板：白名單、黑名單與背包現有內容比對。)*
+
+### 📥 Pickup Upgrade (網路 / 次元拾取升級)
+
+- **Function (功能):** Items collected by walking over them are directly routed into your digital storage instead of clogging backpack slots.
+  
+  *(玩家走過拾取的物品直接存入 RS 系統，不佔用隨身背包空間。)*
+
+### 🍖 Feeding Upgrade (網路 / 次元餵食升級)
+
+- **Function (功能):** Automatically feeds the player by pulling food directly from the RS storage.
+  
+  *(飢餓度下降時，自動從 RS 網路中調取合適的食物餵食玩家。)*
+  
+- **Configurable (可配置):** Customizable hunger thresholds and emergency feeding triggers when hurt.
+  
+  *(支援設定進食飢餓度閾值，並支援受傷時立即進食選項。)*
+
+### 🔄 Refill Upgrade (網路 / 次元補貨升級)
+
+- **Function (功能):** Automatically replenishes designated hotbar or inventory items (building blocks, torches, ammunition, rockets) directly from the RS network.
+  
+  *(快捷欄物資（建築方塊、火把、彈藥、煙火等）消耗時，自動從 RS 網路補齊。)*
+  
+- **Seamless Construction (建築必備):** Enables uninterrupted building and exploration without carrying shulker boxes of identical blocks.
+
+  *(大型建築或冒險時隨身物料時刻保證滿額，告別頻繁翻箱補貨。)*
+
+### 📦 Restock Upgrade (網路 / 次元取貨升級)
+
+- **GUI Quick Button (介面一鍵補貨):** Open the backpack GUI and press the **Quick Restock** button to pull all filtered materials directly from your linked RS network into the backpack.
+  
+  *(背包介面內嵌【一鍵取貨】按鈕，點擊即可自綁定的 RS 網路快速補齊過濾清單中的物料。)*
+  
+- **Container Interact (容器提取):** Shift + Right-Click external chests or machines to restock items according to your filter rules.
+  
+  *(Shift + 右鍵點擊外部箱子或機器，快速依據過濾器提取目標物品。)*
+
+### 🗳️ Deposit Upgrade (網路 / 次元卸貨升級)
+
+- **GUI Quick Button (介面一鍵卸貨):** Open the backpack GUI and press the **Quick Deposit** button to dump matching inventory contents straight into your linked RS system.
+  
+  *(背包介面內嵌【一鍵卸貨】按鈕，點擊即可將背包中的戰利品瞬間存入基地 RS 網路。)*
+
+- **External Dumper (外部轉移):** Shift + Right-Click external containers or different RS nodes to rapidly offload matching materials.
+  
+  *(Shift + 右鍵點擊外部容器或相鄰 RS 網路，快速卸下物料。)*
+
+### 🌊 Pump Upgrade (網路 / 次元液泵升級)
+
+- **Virtual Fluid Network (虛擬無線流體庫):** Even if the backpack has **no fluid tank upgrade installed**, the pump directly interacts with your RS network's fluid storage!
+  
+  *(即使背包**未安裝任何儲罐升級**，液泵亦能將整個 RS 網路作為虛擬儲罐直接進行流體抽吸與排放！)*
+  
+- **Multi-target Interaction (多目標交互):** Supports pumping from/dispensing to in-world fluid blocks, adjacent pipes/tanks, or handheld containers.
+  
+  *(支援抽取/排放世界水源、相鄰管道儲罐以及手持流體容器，並具備專屬進出流向切換。)*
+
+### 🧪 Alchemy Upgrade (網路 / 次元鍊金升級)
+
+- **Smart Bio-Monitor (智慧狀態施藥):** Continuously monitors player or nearby entity conditions (low health, burning, drowning, debuffs, mining fatigue) and automatically applies potions, splash potions, golden apples, or milk directly from the RS network.
+  
+  *(即時監測玩家與周圍實體的生理狀態（殘血、著火、溺水、中毒、虛弱等），自動自 RS 網路調取藥水、金蘋果或牛奶施用。)*
+  
+- **Zero Inventory Clutter (空瓶/鐵桶自動回收):** Empty glass bottles and buckets generated from drinking are automatically recycled back into the RS network instead of cluttering your inventory.
+  
+  *(藥水或牛奶飲用後產生的空玻璃瓶與鐵桶會**自動回傳存入 RS 網路**，隨身背包零雜物殘留。)*
+
+---
+
+## 🛠️ Requirements (前置需求)
+
+* **Minecraft:** 1.21.1
+* **Mod Loader:** NeoForge
+* **Required Mods:**
+  * [Sophisticated Backpacks](https://www.google.com/search?q=https://curseforge.com/minecraft/mc-mods/sophisticated-backpacks&utm_source=gemini)
+  * [Sophisticated Core](https://www.google.com/search?q=https://curseforge.com/minecraft/mc-mods/sophisticated-core&utm_source=gemini)
+  * [Refined Storage 2](https://www.google.com/search?q=https://curseforge.com/minecraft/mc-mods/refined-storage&utm_source=gemini)
+
+
+
+---
 
 ## 📝 Credits & License (鳴謝與授權)
-- **Original Author (原作者)**: 空枝霁雨 (KongZhiJiYu)
-- **Original Project (原專案)**: More Backpack Upgrades ([Modrinth](https://modrinth.com/mod/more-backpack-upgrades))
-- **License (授權)**: LGPL-2.1
-- **Modifications (修改)**: 本版本包含基於原專案的修改與調整 (Modified by TerrySet)。
+
+* **Original Author (原作者):** 空枝霁雨 (KongZhiJiYu) — *More Backpack Upgrades ([Modrinth](https://modrinth.com/mod/more-backpack-upgrades?utm_source=gemini))*
+* **Modifications & Updates (重構與功能擴展):** TerrySet
+* **License (開源授權):** LGPL-2.1
