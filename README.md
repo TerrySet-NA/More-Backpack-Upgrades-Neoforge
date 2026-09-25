@@ -32,7 +32,7 @@ Each upgrade comes in two tiers to match your game progression:
 ## ⚠️ General Upgrade Rules (通用升級規則)
 
 *   **Strictly One per Type (同類型唯一):** Only **one** upgrade of each function (whether Wireless or Dimensional) can be installed in a single backpack.  
-    _(同功能升級（無論是網路版或次元版）在單一背包內**僅限安裝一個**。)_
+    _(同功能升級（無論是無線版或次元版）在單一背包內**僅限安裝一個**。)_
 
 *   **Tier Incompatibility (向下互斥):** Mutually exclusive with vanilla/standard counterparts and lower tiers (cannot install basic or advanced Sophisticated Backpacks upgrades alongside these).  
     _(與精妙背包原版的基礎/進階對應升級互斥，無法重複安裝。)_
