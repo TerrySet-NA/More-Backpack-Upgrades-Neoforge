@@ -1,11 +1,3 @@
-/*
- * Copyright (C) 2026 TerrySet
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- */
-
 package com.kzjy.mobackup.item;
 
 import com.kzjy.mobackup.wrapper.DimensionalPickupUpgradeWrapper;
@@ -24,16 +16,31 @@ import java.util.List;
 import java.util.function.IntSupplier;
 
 public class DimensionalPickupUpgradeItem extends PickupUpgradeItem implements IRSLinkedItem {
-
     public static final UpgradeType<PickupUpgradeWrapper> TYPE = new UpgradeType<>(
             DimensionalPickupUpgradeWrapper::new);
 
-    public DimensionalPickupUpgradeItem(IntSupplier filterSlotCount) {
+    private final boolean dimensional;
+
+    public DimensionalPickupUpgradeItem(IntSupplier filterSlotCount, boolean dimensional) {
         super(filterSlotCount, Config.SERVER.maxUpgradesPerStorage);
+        this.dimensional = dimensional;
+    }
+
+    public DimensionalPickupUpgradeItem(IntSupplier filterSlotCount) {
+        this(filterSlotCount, true);
+    }
+
+    public DimensionalPickupUpgradeItem(boolean dimensional) {
+        this(Config.SERVER.advancedPickupUpgrade.filterSlots::get, dimensional);
     }
 
     public DimensionalPickupUpgradeItem() {
-        this(Config.SERVER.advancedPickupUpgrade.filterSlots::get);
+        this(true);
+    }
+
+    @Override
+    public boolean isDimensional() {
+        return dimensional;
     }
 
     @Override

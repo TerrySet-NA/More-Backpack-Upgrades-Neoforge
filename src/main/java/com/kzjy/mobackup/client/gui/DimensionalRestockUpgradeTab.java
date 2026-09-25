@@ -8,28 +8,26 @@
 
 package com.kzjy.mobackup.client.gui;
 
+import com.kzjy.mobackup.core.RSBridge;
 import net.minecraft.network.chat.Component;
 import net.p3pp3rf1y.sophisticatedbackpacks.Config;
 import net.p3pp3rf1y.sophisticatedbackpacks.client.gui.SBPButtonDefinitions;
 import net.p3pp3rf1y.sophisticatedbackpacks.upgrades.restock.RestockUpgradeTab;
 import net.p3pp3rf1y.sophisticatedbackpacks.upgrades.restock.RestockUpgradeWrapper;
 import net.p3pp3rf1y.sophisticatedcore.client.gui.StorageScreenBase;
-import net.p3pp3rf1y.sophisticatedcore.client.gui.controls.ButtonDefinition;
 import net.p3pp3rf1y.sophisticatedcore.client.gui.utils.Position;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.ContentsFilterControl;
-import net.p3pp3rf1y.sophisticatedcore.upgrades.ContentsFilterType;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.ContentsFilteredUpgradeContainer;
 
 public class DimensionalRestockUpgradeTab extends RestockUpgradeTab {
 
     @SuppressWarnings("null")
-    public DimensionalRestockUpgradeTab(ContentsFilteredUpgradeContainer<RestockUpgradeWrapper> upgradeContainer, Position position, StorageScreenBase<?> screen,
-                                       ButtonDefinition.Toggle<ContentsFilterType> contentsFilterButton) {
+    public DimensionalRestockUpgradeTab(ContentsFilteredUpgradeContainer<RestockUpgradeWrapper> upgradeContainer, Position position, StorageScreenBase<?> screen) {
         super(upgradeContainer, position, screen,
-                Component.translatable("gui.mobackup.upgrade.dimensional_restock"),
-                Component.translatable("gui.mobackup.upgrade.dimensional_restock.tooltip"));
+                Component.translatable("gui.mobackup.upgrade." + (RSBridge.isDimensional(upgradeContainer.getUpgradeStack()) ? "dimensional_restock" : "network_restock")),
+                Component.translatable("gui.mobackup.upgrade." + (RSBridge.isDimensional(upgradeContainer.getUpgradeStack()) ? "dimensional_restock.tooltip" : "network_restock.tooltip")));
 
-        // 2. 一鍵將背包中目標物品存入 RS 網路按鈕 (x + 39, y + 24)
+        // 2. 一鍵將背包中目標物品存入 RS 網路按鈕 (x + 3, y + 24)
         addHideableChild(ModGuiControls.createQuickRestockButton(new Position(x + 3, y + 24), getContainer()));
         
         // 1. 外部卸貨來源切換按鈕 (RS 網路 ⇄ 隨身背包) (x + 21, y + 24)

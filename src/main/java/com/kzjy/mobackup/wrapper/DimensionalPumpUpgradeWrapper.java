@@ -17,7 +17,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
-
 import javax.annotation.Nullable;
 
 import com.kzjy.mobackup.core.RSBridge;
@@ -27,20 +26,17 @@ import com.refinedmods.refinedstorage.api.network.Network;
 import com.refinedmods.refinedstorage.api.network.storage.StorageNetworkComponent;
 import com.refinedmods.refinedstorage.api.resource.ResourceAmount;
 import com.refinedmods.refinedstorage.api.storage.Actor;
-import com.refinedmods.refinedstorage.common.api.storage.PlayerActor;
 import com.refinedmods.refinedstorage.common.security.BuiltinPermission;
 import com.refinedmods.refinedstorage.common.support.resource.FluidResource;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.BucketPickup;
@@ -68,6 +64,7 @@ public class DimensionalPumpUpgradeWrapper extends PumpUpgradeWrapper implements
     private static final int PLAYER_SEARCH_RANGE = 3;
     private static final int PUMP_IN_WORLD_RANGE = 4;
     private static final int PUMP_IN_WORLD_RANGE_SQR = PUMP_IN_WORLD_RANGE * PUMP_IN_WORLD_RANGE;
+    private BlockPos currentBlockPos = null;
 
     private long lastHandActionTime = -1;
 
@@ -75,30 +72,14 @@ public class DimensionalPumpUpgradeWrapper extends PumpUpgradeWrapper implements
         super(storageWrapper, upgrade, upgradeSaveHandler);
     }
 
-    // =========================================================================
-    // 優先級狀態持久化
-    // =========================================================================
-
-    private Boolean networkFirstCache = null;
-
     @Override
-    public boolean isNetworkFirst() {
-        if (networkFirstCache == null) {
-            CustomData customData = upgrade.get(DataComponents.CUSTOM_DATA);
-            if (customData != null && customData.contains(TAG_NETWORK_FIRST)) {
-                networkFirstCache = customData.copyTag().getBoolean(TAG_NETWORK_FIRST);
-            } else {
-                networkFirstCache = true; // 預設：RS 網路優先
-            }
-        }
-        return networkFirstCache;
+    public void save() {
+        super.save();
     }
 
     @Override
-    public void setNetworkFirst(boolean networkFirst) {
-        this.networkFirstCache = networkFirst;
-        CustomData.update(DataComponents.CUSTOM_DATA, upgrade, tag -> tag.putBoolean(TAG_NETWORK_FIRST, networkFirst));
-        save();
+    public boolean getDefaultNetworkFirst() {
+        return true; // 泵升級預設 RS 網路優先
     }
 
     private static FluidResource toResource(FluidStack stack) {
@@ -122,8 +103,9 @@ public class DimensionalPumpUpgradeWrapper extends PumpUpgradeWrapper implements
             return;
         }
 
+        currentBlockPos = pos.immutable();
+
         IFluidHandler backpackTank = storageWrapper.getFluidHandler().orElse(null);
-        // 規則 3: 若背包在地上 (entity 不是 Player)，RS 操作身分嚴格為 null
         Player player = entity instanceof Player p ? p : null;
 
         boolean hasLinkedRs = RSBridge.getCoordinate(getUpgradeStack()) != null;
@@ -213,7 +195,6 @@ public class DimensionalPumpUpgradeWrapper extends PumpUpgradeWrapper implements
 
             int actuallyFilled = fluidHandler.fill(realDrained, IFluidHandler.FluidAction.EXECUTE);
 
-            // 規則 11: 終極防吞回滾
             if (actuallyFilled < realDrained.getAmount()) {
                 int leftover = realDrained.getAmount() - actuallyFilled;
                 sourceHandler.fill(realDrained.copyWithAmount(leftover), IFluidHandler.FluidAction.EXECUTE);
@@ -332,9 +313,6 @@ public class DimensionalPumpUpgradeWrapper extends PumpUpgradeWrapper implements
         return false;
     }
 
-    /**
-     * 規則 3: 地上背包直接共用無人機器 FluidHandler (player 嚴格為 null)，不拿周圍路人當 RS 身分
-     */
     private boolean handleFluidContainersInHandsOfNearbyPlayers(Level level, BlockPos pos, IFluidHandler fluidHandler) {
         AABB searchBox = new AABB(pos).inflate(PLAYER_SEARCH_RANGE);
         for (Player player : level.players()) {
@@ -443,15 +421,11 @@ public class DimensionalPumpUpgradeWrapper extends PumpUpgradeWrapper implements
         }
 
         private void collectRsFluids(Map<FluidResource, Long> map) {
-            Network network = RSBridge.getNetwork(level, getUpgradeStack(), player, BuiltinPermission.EXTRACT);
-            if (network == null) {
-                return;
-            }
+            Network network = RSBridge.getNetwork(level, getUpgradeStack(), player, currentBlockPos, BuiltinPermission.EXTRACT);
+            if (network == null) return;
 
             StorageNetworkComponent storage = network.getComponent(StorageNetworkComponent.class);
-            if (storage == null) {
-                return;
-            }
+            if (storage == null) return;
 
             for (ResourceAmount ra : new ArrayList<>(storage.getAll())) {
                 if (ra.amount() > 0 && ra.resource() instanceof FluidResource fr) {
@@ -464,9 +438,7 @@ public class DimensionalPumpUpgradeWrapper extends PumpUpgradeWrapper implements
         }
 
         private void collectBackpackFluids(Map<FluidResource, Long> map) {
-            if (backpackTank == null) {
-                return;
-            }
+            if (backpackTank == null) return;
             for (int i = 0; i < backpackTank.getTanks(); i++) {
                 FluidStack fs = backpackTank.getFluidInTank(i);
                 if (!fs.isEmpty() && getFluidFilterLogic().fluidMatches(fs)) {
@@ -496,10 +468,6 @@ public class DimensionalPumpUpgradeWrapper extends PumpUpgradeWrapper implements
         public boolean isFluidValid(int tank, FluidStack stack) {
             return getFluidFilterLogic().fluidMatches(stack);
         }
-
-        // =========================================================================
-        // 級聯注入 (規則 10: 優先不足時切換)
-        // =========================================================================
 
         @Override
         public int fill(FluidStack resource, FluidAction action) {
@@ -545,23 +513,16 @@ public class DimensionalPumpUpgradeWrapper extends PumpUpgradeWrapper implements
         }
 
         private int fillRs(FluidStack stack, FluidAction action) {
-            if (stack.isEmpty()) {
-                return 0;
-            }
-            Network network = RSBridge.getNetwork(level, getUpgradeStack(), player, BuiltinPermission.INSERT);
-            if (network == null) {
-                return 0;
-            }
+            if (stack.isEmpty()) return 0;
+            Network network = RSBridge.getNetwork(level, getUpgradeStack(), player, currentBlockPos, BuiltinPermission.INSERT);
+            if (network == null) return 0;
 
             StorageNetworkComponent storage = network.getComponent(StorageNetworkComponent.class);
-            if (storage == null) {
-                return 0;
-            }
+            if (storage == null) return 0;
 
             FluidResource resource = toResource(stack);
             Action rsAction = action.execute() ? Action.EXECUTE : Action.SIMULATE;
-            // 規則 1: player == null 時使用 Actor.EMPTY 防崩潰
-            Actor actor = player != null ? new PlayerActor(player) : Actor.EMPTY;
+            Actor actor = RSBridge.getActor(player);
             return (int) storage.insert(resource, stack.getAmount(), rsAction, actor);
         }
 
@@ -569,15 +530,9 @@ public class DimensionalPumpUpgradeWrapper extends PumpUpgradeWrapper implements
             return backpackTank != null && !stack.isEmpty() ? backpackTank.fill(stack, action) : 0;
         }
 
-        // =========================================================================
-        // 級聯抽取 (規則 10: 優先不足時切換)
-        // =========================================================================
-
         @Override
         public FluidStack drain(FluidStack resource, FluidAction action) {
-            if (resource.isEmpty()) {
-                return FluidStack.EMPTY;
-            }
+            if (resource.isEmpty()) return FluidStack.EMPTY;
 
             FluidStack drained;
             if (networkFirst) {
@@ -610,9 +565,7 @@ public class DimensionalPumpUpgradeWrapper extends PumpUpgradeWrapper implements
 
         @Override
         public FluidStack drain(int maxDrain, FluidAction action) {
-            if (maxDrain <= 0) {
-                return FluidStack.EMPTY;
-            }
+            if (maxDrain <= 0) return FluidStack.EMPTY;
             for (FluidStack fluid : getAvailableFluids()) {
                 if (!fluid.isEmpty()) {
                     FluidStack drained = drain(fluid.copyWithAmount(maxDrain), action);
@@ -625,23 +578,16 @@ public class DimensionalPumpUpgradeWrapper extends PumpUpgradeWrapper implements
         }
 
         private FluidStack drainRs(FluidStack resource, FluidAction action) {
-            if (resource.isEmpty()) {
-                return FluidStack.EMPTY;
-            }
-            Network network = RSBridge.getNetwork(level, getUpgradeStack(), player, BuiltinPermission.EXTRACT);
-            if (network == null) {
-                return FluidStack.EMPTY;
-            }
+            if (resource.isEmpty()) return FluidStack.EMPTY;
+            Network network = RSBridge.getNetwork(level, getUpgradeStack(), player, currentBlockPos, BuiltinPermission.EXTRACT);
+            if (network == null) return FluidStack.EMPTY;
 
             StorageNetworkComponent storage = network.getComponent(StorageNetworkComponent.class);
-            if (storage == null) {
-                return FluidStack.EMPTY;
-            }
+            if (storage == null) return FluidStack.EMPTY;
 
             FluidResource res = toResource(resource);
             Action rsAction = action.execute() ? Action.EXECUTE : Action.SIMULATE;
-            // 規則 1: player == null 時使用 Actor.EMPTY 防崩潰
-            Actor actor = player != null ? new PlayerActor(player) : Actor.EMPTY;
+            Actor actor = RSBridge.getActor(player);
             long extracted = storage.extract(res, resource.getAmount(), rsAction, actor);
             return extracted > 0 ? resource.copyWithAmount((int) extracted) : FluidStack.EMPTY;
         }

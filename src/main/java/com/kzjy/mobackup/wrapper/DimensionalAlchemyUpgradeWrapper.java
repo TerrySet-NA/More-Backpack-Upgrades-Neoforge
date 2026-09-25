@@ -12,30 +12,27 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-
 import javax.annotation.Nullable;
 
 import com.kzjy.mobackup.core.RSBridge;
 import com.kzjy.mobackup.mixin.AlchemyUpgradeWrapperAccessor;
 import com.kzjy.mobackup.upgrade.IPriorityRoutingUpgrade;
+import com.kzjy.mobackup.util.RSRoutingHelper;
 import com.kzjy.mobackup.util.SafetyRollbackHelper;
 import com.refinedmods.refinedstorage.api.core.Action;
 import com.refinedmods.refinedstorage.api.network.Network;
 import com.refinedmods.refinedstorage.api.network.storage.StorageNetworkComponent;
 import com.refinedmods.refinedstorage.api.resource.ResourceAmount;
 import com.refinedmods.refinedstorage.api.storage.Actor;
-import com.refinedmods.refinedstorage.common.api.storage.PlayerActor;
 import com.refinedmods.refinedstorage.common.security.BuiltinPermission;
 import com.refinedmods.refinedstorage.common.support.resource.ItemResource;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.UseAnim;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.p3pp3rf1y.sophisticatedcore.api.IStorageWrapper;
@@ -55,42 +52,21 @@ public class DimensionalAlchemyUpgradeWrapper extends AlchemyUpgradeWrapper impl
     private ItemStack stackBeingApplied = ItemStack.EMPTY;
     private AlchemyItemDefinition defBeingApplied = null;
     private @Nullable Player actionPlayerBeingApplied = null;
+    private BlockPos currentBlockPos = null;
 
     public DimensionalAlchemyUpgradeWrapper(IStorageWrapper storageWrapper, ItemStack upgrade, Consumer<ItemStack> upgradeSaveHandler) {
         super(storageWrapper, upgrade, upgradeSaveHandler);
     }
 
-    // =========================================================================
-    // 優先級狀態持久化
-    // =========================================================================
-
-    private Boolean networkFirstCache = null;
-
     @Override
-    public boolean isNetworkFirst() {
-        if (networkFirstCache == null) {
-            CustomData customData = upgrade.get(DataComponents.CUSTOM_DATA);
-            if (customData != null && customData.contains(TAG_NETWORK_FIRST)) {
-                networkFirstCache = customData.copyTag().getBoolean(TAG_NETWORK_FIRST);
-            } else {
-                networkFirstCache = true; // 預設：RS 網路優先
-            }
-        }
-        return networkFirstCache;
+    public void save() {
+        super.save();
     }
 
     @Override
-    public void setNetworkFirst(boolean networkFirst) {
-        this.networkFirstCache = networkFirst;
-        CustomData.update(DataComponents.CUSTOM_DATA, upgrade, tag -> {
-            tag.putBoolean(TAG_NETWORK_FIRST, networkFirst);
-        });
-        save();
+    public boolean getDefaultNetworkFirst() {
+        return true;
     }
-
-    // =========================================================================
-    // 主 Tick 調度與施藥狀態機
-    // =========================================================================
 
     @Override
     public void tick(@Nullable Entity entity, Level level, BlockPos pos) {
@@ -98,10 +74,10 @@ public class DimensionalAlchemyUpgradeWrapper extends AlchemyUpgradeWrapper impl
             return;
         }
 
-        // 規則 3: 若背包在地上 (entity 不是 Player)，actionPlayer 嚴格為 null
+        currentBlockPos = pos.immutable();
+
         Player actionPlayer = entity instanceof Player p ? p : null;
 
-        // 處理施用倒數狀態
         if (remainingApplyTime > 0) {
             if (applyingToEntity == null || !applyingToEntity.isAlive() || applyingToEntity.isRemoved()) {
                 abortAndRefund(level);
@@ -138,17 +114,13 @@ public class DimensionalAlchemyUpgradeWrapper extends AlchemyUpgradeWrapper impl
             return;
         }
 
-        // 搜尋符合條件之實體並施藥
         if (entity instanceof LivingEntity livingEntity) {
             applyTo(livingEntity, level, actionPlayer);
         } else {
-            // 地上背包模式：actionPlayer 嚴格為 null，不拿周圍實體當作 RS 操作身分
             List<LivingEntity> entities = level.getEntitiesOfClass(LivingEntity.class, new AABB(pos).inflate(CHECK_RADIUS), this::entityMatches);
             for (LivingEntity livingEntity : entities) {
                 applyTo(livingEntity, level, null);
-                if (applying) {
-                    break;
-                }
+                if (applying) break;
             }
         }
 
@@ -175,27 +147,22 @@ public class DimensionalAlchemyUpgradeWrapper extends AlchemyUpgradeWrapper impl
         nextCheckTime = level.getGameTime() + CHECK_INTERVAL;
     }
 
-    /**
-     * 容器殘留物（空瓶、碗等）依優先級回存
-     */
     private void handleRemainingStack(Level level, ItemStack remainingStack, @Nullable Player refundTargetPlayer, @Nullable Player actionPlayer) {
-        if (remainingStack.isEmpty()) {
-            return;
-        }
+        if (remainingStack.isEmpty()) return;
+
+        Network network = RSBridge.getNetwork(level, getUpgradeStack(), actionPlayer, this.currentBlockPos, BuiltinPermission.INSERT);
+        var backpackInv = storageWrapper.getInventoryForUpgradeProcessing();
 
         if (isNetworkFirst()) {
-            remainingStack = insertIntoRsNetwork(level, remainingStack, actionPlayer);
-            if (!remainingStack.isEmpty()) {
-                remainingStack = storageWrapper.getInventoryForUpgradeProcessing().insertItem(remainingStack, false);
-            }
+            if (network != null) remainingStack = RSRoutingHelper.insertIntoRs(network, remainingStack, false, actionPlayer);
+            if (!remainingStack.isEmpty()) remainingStack = backpackInv.insertItem(remainingStack, false);
         } else {
-            remainingStack = storageWrapper.getInventoryForUpgradeProcessing().insertItem(remainingStack, false);
-            if (!remainingStack.isEmpty()) {
-                remainingStack = insertIntoRsNetwork(level, remainingStack, actionPlayer);
+            remainingStack = backpackInv.insertItem(remainingStack, false);
+            if (!remainingStack.isEmpty() && network != null) {
+                remainingStack = RSRoutingHelper.insertIntoRs(network, remainingStack, false, actionPlayer);
             }
         }
 
-        // 規則 11: 終極防吞兜底給接收效果的玩家
         if (!remainingStack.isEmpty()) {
             SafetyRollbackHelper.fallbackToBackpackOrPlayer(remainingStack, storageWrapper, refundTargetPlayer);
         }
@@ -225,9 +192,7 @@ public class DimensionalAlchemyUpgradeWrapper extends AlchemyUpgradeWrapper impl
 
         Player refundTargetPlayer = livingEntity instanceof Player p ? p : actionPlayer;
 
-        // 規則 10: 非 XOR 升級，優先級不足/失敗時切換另一端
         if (isNetworkFirst()) {
-            // 1. 先查 RS 網路
             ItemStack extracted = extractFromRsNetwork(level, matcher, actionPlayer);
             if (!extracted.isEmpty()) {
                 if (startApplying(extracted, def, livingEntity, actionPlayer)) {
@@ -236,14 +201,11 @@ public class DimensionalAlchemyUpgradeWrapper extends AlchemyUpgradeWrapper impl
                     handleRemainingStack(level, extracted, refundTargetPlayer, actionPlayer);
                 }
             }
-            // 2. 降級查隨身背包
             return consumeFromBackpack(livingEntity, def, matcher, level, refundTargetPlayer, actionPlayer);
         } else {
-            // 1. 先查隨身背包
             if (consumeFromBackpack(livingEntity, def, matcher, level, refundTargetPlayer, actionPlayer)) {
                 return true;
             }
-            // 2. 降級向 RS 網路調取
             ItemStack extracted = extractFromRsNetwork(level, matcher, actionPlayer);
             if (!extracted.isEmpty()) {
                 if (startApplying(extracted, def, livingEntity, actionPlayer)) {
@@ -289,22 +251,14 @@ public class DimensionalAlchemyUpgradeWrapper extends AlchemyUpgradeWrapper impl
         return false;
     }
 
-    /**
-     * 從 RS 網路提取符合過濾條件的藥水
-     */
     private ItemStack extractFromRsNetwork(Level level, Predicate<ItemStack> matcher, @Nullable Player actionPlayer) {
-        Network network = RSBridge.getNetwork(level, getUpgradeStack(), actionPlayer, BuiltinPermission.EXTRACT);
-        if (network == null) {
-            return ItemStack.EMPTY;
-        }
+        Network network = RSBridge.getNetwork(level, getUpgradeStack(), actionPlayer, this.currentBlockPos, BuiltinPermission.EXTRACT);
+        if (network == null) return ItemStack.EMPTY;
 
         StorageNetworkComponent storage = network.getComponent(StorageNetworkComponent.class);
-        if (storage == null) {
-            return ItemStack.EMPTY;
-        }
+        if (storage == null) return ItemStack.EMPTY;
 
-        // 規則 1: actionPlayer 為 null 時使用 Actor.EMPTY
-        Actor actor = actionPlayer != null ? new PlayerActor(actionPlayer) : Actor.EMPTY;
+        Actor actor = RSBridge.getActor(actionPlayer);
         ItemResource matchedResource = null;
 
         for (ResourceAmount ra : new ArrayList<>(storage.getAll())) {
@@ -323,44 +277,13 @@ public class DimensionalAlchemyUpgradeWrapper extends AlchemyUpgradeWrapper impl
                 return matchedResource.toItemStack((int) extracted);
             }
         }
-
         return ItemStack.EMPTY;
-    }
-
-    /**
-     * 回存容器殘留物至 RS
-     */
-    private ItemStack insertIntoRsNetwork(Level level, ItemStack stack, @Nullable Player actionPlayer) {
-        if (stack.isEmpty()) {
-            return stack;
-        }
-
-        Network network = RSBridge.getNetwork(level, getUpgradeStack(), actionPlayer, BuiltinPermission.INSERT);
-        if (network == null) {
-            return stack;
-        }
-
-        StorageNetworkComponent storage = network.getComponent(StorageNetworkComponent.class);
-        if (storage == null) {
-            return stack;
-        }
-
-        ItemResource res = ItemResource.ofItemStack(stack);
-        Actor actor = actionPlayer != null ? new PlayerActor(actionPlayer) : Actor.EMPTY;
-        long inserted = storage.insert(res, stack.getCount(), Action.EXECUTE, actor);
-        if (inserted <= 0) {
-            return stack;
-        }
-
-        int rem = stack.getCount() - (int) inserted;
-        return rem <= 0 ? ItemStack.EMPTY : stack.copyWithCount(rem);
     }
 
     @Override
     public void triggerItemUseEffects(Level level) {
-        if (applyingToEntity == null || stackBeingApplied.isEmpty()) {
-            return;
-        }
+        if (applyingToEntity == null || stackBeingApplied.isEmpty()) return;
+
         if (stackBeingApplied.getUseAnimation() == UseAnim.DRINK) {
             level.playSound(null, applyingToEntity.getX(), applyingToEntity.getY(), applyingToEntity.getZ(),
                     stackBeingApplied.getDrinkingSound(), applyingToEntity.getSoundSource(), 0.5F,
@@ -379,14 +302,11 @@ public class DimensionalAlchemyUpgradeWrapper extends AlchemyUpgradeWrapper impl
         }
         int applyTimePassed = stackBeingApplied.getUseDuration(applyingToEntity) - remainingApplyTime;
         int effectDelay = (int) (stackBeingApplied.getUseDuration(applyingToEntity) * 0.21875F);
-        boolean canStartTriggering = applyTimePassed > effectDelay;
-        return canStartTriggering && remainingApplyTime % 4 == 0;
+        return applyTimePassed > effectDelay && remainingApplyTime % 4 == 0;
     }
 
     private boolean entityMatches(LivingEntity livingEntity) {
-        if (!livingEntity.isAlive()) {
-            return false;
-        }
+        if (!livingEntity.isAlive()) return false;
         return switch (getEntityMatch()) {
             case PLAYERS -> (livingEntity instanceof Player);
             case ENTITIES -> !(livingEntity instanceof Player);

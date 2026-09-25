@@ -11,29 +11,26 @@ package com.kzjy.mobackup;
 import java.util.List;
 import java.util.Objects;
 
-import com.kzjy.mobackup.client.gui.DimensionalAlchemyUpgradeTab;
-import com.kzjy.mobackup.client.gui.DimensionalDepositUpgradeTab;
-import com.kzjy.mobackup.client.gui.DimensionalFeedingUpgradeTab;
-import com.kzjy.mobackup.client.gui.DimensionalMagnetUpgradeTab;
-import com.kzjy.mobackup.client.gui.DimensionalPickupUpgradeTab;
-import com.kzjy.mobackup.client.gui.DimensionalPumpUpgradeTab;
-import com.kzjy.mobackup.client.gui.DimensionalRefillUpgradeTab;
-import com.kzjy.mobackup.client.gui.DimensionalRestockUpgradeTab;
+import com.kzjy.mobackup.client.gui.*;
 import com.kzjy.mobackup.core.PickupContext;
 import com.kzjy.mobackup.core.RSBridge;
+import com.kzjy.mobackup.item.IRSLinkedItem;
 import com.kzjy.mobackup.registry.ModCreativeModeTabs;
+import com.kzjy.mobackup.registry.ModDataComponents;
 import com.kzjy.mobackup.registry.ModItems;
 import com.kzjy.mobackup.wrapper.DimensionalDepositUpgradeWrapper;
 import com.kzjy.mobackup.wrapper.DimensionalRestockUpgradeWrapper;
 import com.refinedmods.refinedstorage.api.network.Network;
 import com.refinedmods.refinedstorage.common.security.BuiltinPermission;
 
+import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.neoforged.api.distmarker.Dist;
@@ -43,7 +40,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -80,8 +76,7 @@ public class MoBackup {
     public static final String MOD_ID = "mobackup";
 
     public MoBackup(IEventBus modEventBus, ModContainer modContainer) {
-        modContainer.registerConfig(ModConfig.Type.COMMON, com.kzjy.mobackup.Config.COMMON_SPEC, "MoreBackpackUpgrades-common.toml");
-
+        ModDataComponents.DATA_COMPONENTS.register(modEventBus);
         ModItems.register(modEventBus);
         ModCreativeModeTabs.register(modEventBus);
         modEventBus.addListener(this::commonSetup);
@@ -90,49 +85,54 @@ public class MoBackup {
 
     private void commonSetup(final FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
-            UpgradeContainerRegistry.register(Objects.requireNonNull(ModItems.DIMENSIONAL_MAGNET_UPGRADE.getId()),
-                    DIMENSIONAL_MAGNET_TYPE);
-            UpgradeContainerRegistry.register(Objects.requireNonNull(ModItems.DIMENSIONAL_PICKUP_UPGRADE.getId()),
-                    DIMENSIONAL_PICKUP_TYPE);
-            UpgradeContainerRegistry.register(Objects.requireNonNull(ModItems.DIMENSIONAL_DEPOSIT_UPGRADE.getId()),
-                    DIMENSIONAL_DEPOSIT_TYPE);
-            UpgradeContainerRegistry.register(Objects.requireNonNull(ModItems.DIMENSIONAL_FEEDING_UPGRADE.getId()),
-                    DIMENSIONAL_FEEDING_TYPE);
-            UpgradeContainerRegistry.register(Objects.requireNonNull(ModItems.DIMENSIONAL_REFILL_UPGRADE.getId()),
-                    DIMENSIONAL_REFILL_TYPE);
-            UpgradeContainerRegistry.register(Objects.requireNonNull(ModItems.DIMENSIONAL_RESTOCK_UPGRADE.getId()),
-                    DIMENSIONAL_RESTOCK_TYPE);
-            UpgradeContainerRegistry.register(Objects.requireNonNull(ModItems.DIMENSIONAL_PUMP_UPGRADE.getId()),
-                    DIMENSIONAL_PUMP_TYPE);
-            UpgradeContainerRegistry.register(Objects.requireNonNull(ModItems.DIMENSIONAL_ALCHEMY_UPGRADE.getId()),
-                    DIMENSIONAL_ALCHEMY_TYPE);
+            // 8 個次元版註冊
+            registerUpgrade(ModItems.DIMENSIONAL_MAGNET_UPGRADE.getId(), MAGNET_TYPE);
+            registerUpgrade(ModItems.DIMENSIONAL_PICKUP_UPGRADE.getId(), PICKUP_TYPE);
+            registerUpgrade(ModItems.DIMENSIONAL_DEPOSIT_UPGRADE.getId(), DEPOSIT_TYPE);
+            registerUpgrade(ModItems.DIMENSIONAL_FEEDING_UPGRADE.getId(), FEEDING_TYPE);
+            registerUpgrade(ModItems.DIMENSIONAL_REFILL_UPGRADE.getId(), REFILL_TYPE);
+            registerUpgrade(ModItems.DIMENSIONAL_RESTOCK_UPGRADE.getId(), RESTOCK_TYPE);
+            registerUpgrade(ModItems.DIMENSIONAL_PUMP_UPGRADE.getId(), PUMP_TYPE);
+            registerUpgrade(ModItems.DIMENSIONAL_ALCHEMY_UPGRADE.getId(), ALCHEMY_TYPE);
+
+            // 8 個網路版共用完全相同的 ContainerType
+            registerUpgrade(ModItems.NETWORK_MAGNET_UPGRADE.getId(), MAGNET_TYPE);
+            registerUpgrade(ModItems.NETWORK_PICKUP_UPGRADE.getId(), PICKUP_TYPE);
+            registerUpgrade(ModItems.NETWORK_DEPOSIT_UPGRADE.getId(), DEPOSIT_TYPE);
+            registerUpgrade(ModItems.NETWORK_FEEDING_UPGRADE.getId(), FEEDING_TYPE);
+            registerUpgrade(ModItems.NETWORK_REFILL_UPGRADE.getId(), REFILL_TYPE);
+            registerUpgrade(ModItems.NETWORK_RESTOCK_UPGRADE.getId(), RESTOCK_TYPE);
+            registerUpgrade(ModItems.NETWORK_PUMP_UPGRADE.getId(), PUMP_TYPE);
+            registerUpgrade(ModItems.NETWORK_ALCHEMY_UPGRADE.getId(), ALCHEMY_TYPE);
         });
+    }
+
+    private static void registerUpgrade(ResourceLocation id, UpgradeContainerType<?, ?> type) {
+        UpgradeContainerRegistry.register(Objects.requireNonNull(id), type);
     }
 
     public static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
     }
 
-    public static final UpgradeContainerType<PickupUpgradeWrapper, ContentsFilteredUpgradeContainer<PickupUpgradeWrapper>> DIMENSIONAL_PICKUP_TYPE =
+    // 共通 ContainerType (共 8 個)
+    public static final UpgradeContainerType<PickupUpgradeWrapper, ContentsFilteredUpgradeContainer<PickupUpgradeWrapper>> PICKUP_TYPE =
             new UpgradeContainerType<>(ContentsFilteredUpgradeContainer::new);
-    public static final UpgradeContainerType<MagnetUpgradeWrapper, MagnetUpgradeContainer> DIMENSIONAL_MAGNET_TYPE =
+    public static final UpgradeContainerType<MagnetUpgradeWrapper, MagnetUpgradeContainer> MAGNET_TYPE =
             new UpgradeContainerType<>(MagnetUpgradeContainer::new);
-    public static final UpgradeContainerType<DepositUpgradeWrapper, DepositUpgradeContainer> DIMENSIONAL_DEPOSIT_TYPE =
+    public static final UpgradeContainerType<DepositUpgradeWrapper, DepositUpgradeContainer> DEPOSIT_TYPE =
             new UpgradeContainerType<>(DepositUpgradeContainer::new);
-    public static final UpgradeContainerType<FeedingUpgradeWrapper, FeedingUpgradeContainer> DIMENSIONAL_FEEDING_TYPE =
+    public static final UpgradeContainerType<FeedingUpgradeWrapper, FeedingUpgradeContainer> FEEDING_TYPE =
             new UpgradeContainerType<>(FeedingUpgradeContainer::new);
-    public static final UpgradeContainerType<RefillUpgradeWrapper, RefillUpgradeContainer> DIMENSIONAL_REFILL_TYPE =
+    public static final UpgradeContainerType<RefillUpgradeWrapper, RefillUpgradeContainer> REFILL_TYPE =
             new UpgradeContainerType<>(RefillUpgradeContainer::new);
-    public static final UpgradeContainerType<RestockUpgradeWrapper, ContentsFilteredUpgradeContainer<RestockUpgradeWrapper>> DIMENSIONAL_RESTOCK_TYPE =
+    public static final UpgradeContainerType<RestockUpgradeWrapper, ContentsFilteredUpgradeContainer<RestockUpgradeWrapper>> RESTOCK_TYPE =
             new UpgradeContainerType<>(ContentsFilteredUpgradeContainer::new);
-    public static final UpgradeContainerType<PumpUpgradeWrapper, PumpUpgradeContainer> DIMENSIONAL_PUMP_TYPE =
+    public static final UpgradeContainerType<PumpUpgradeWrapper, PumpUpgradeContainer> PUMP_TYPE =
             new UpgradeContainerType<>(PumpUpgradeContainer::new);
-    public static final UpgradeContainerType<AlchemyUpgradeWrapper, AlchemyUpgradeContainer> DIMENSIONAL_ALCHEMY_TYPE =
+    public static final UpgradeContainerType<AlchemyUpgradeWrapper, AlchemyUpgradeContainer> ALCHEMY_TYPE =
             new UpgradeContainerType<>(AlchemyUpgradeContainer::new);
 
-    // =========================================================================
-    // 拾取上下文管理 (Pickup Context)
-    // =========================================================================
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onPickupPre(ItemEntityPickupEvent.Pre event) {
         PickupContext.push(event.getPlayer());
@@ -143,24 +143,15 @@ public class MoBackup {
         PickupContext.pop();
     }
 
-    // =========================================================================
-    // 世界交互：手持背包 Shift + 右鍵點擊實體 RS 方塊一鍵存取
-    // =========================================================================
     @SubscribeEvent(priority = EventPriority.HIGH)
     public void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
-        if (event.getHand() != InteractionHand.MAIN_HAND) {
-            return;
-        }
+        if (event.getHand() != InteractionHand.MAIN_HAND) return;
 
         Player player = event.getEntity();
-        if (player == null || !player.isShiftKeyDown()) {
-            return;
-        }
+        if (player == null || !player.isShiftKeyDown()) return;
 
         ItemStack held = event.getItemStack();
-        if (!(held.getItem() instanceof BackpackItem)) {
-            return;
-        }
+        if (!(held.getItem() instanceof BackpackItem)) return;
 
         Level level = event.getLevel();
         BlockPos pos = event.getPos();
@@ -175,12 +166,7 @@ public class MoBackup {
 
         if (level instanceof ServerLevel serverLevel) {
             Network network = RSBridge.getRsNetworkAt(serverLevel, pos);
-            if (network == null) {
-                return;
-            }
-
-            // 🛡️ 嚴格權限檢驗
-            if (!RSBridge.hasPermission(network, player, BuiltinPermission.INSERT)) {
+            if (network == null || !RSBridge.hasPermission(network, player, BuiltinPermission.INSERT)) {
                 return;
             }
 
@@ -189,18 +175,14 @@ public class MoBackup {
 
             boolean handled = false;
 
-            // 1. 先執行次元卸貨
-            List<DimensionalDepositUpgradeWrapper> depositWrappers =
-                    backpackWrapper.getUpgradeHandler().getWrappersThatImplement(DimensionalDepositUpgradeWrapper.class);
-            for (DimensionalDepositUpgradeWrapper depositWrapper : depositWrappers) {
+            // 卸貨升級執行
+            for (DimensionalDepositUpgradeWrapper depositWrapper : backpackWrapper.getUpgradeHandler().getWrappersThatImplement(DimensionalDepositUpgradeWrapper.class)) {
                 depositWrapper.performDepositAndNotify(network, player);
                 handled = true;
             }
 
-            // 2. 後執行次元取貨
-            List<DimensionalRestockUpgradeWrapper> restockWrappers =
-                    backpackWrapper.getUpgradeHandler().getWrappersThatImplement(DimensionalRestockUpgradeWrapper.class);
-            for (DimensionalRestockUpgradeWrapper restockWrapper : restockWrappers) {
+            // 取貨升級執行
+            for (DimensionalRestockUpgradeWrapper restockWrapper : backpackWrapper.getUpgradeHandler().getWrappersThatImplement(DimensionalRestockUpgradeWrapper.class)) {
                 restockWrapper.performRestockAndNotify(network, player);
                 handled = true;
             }
@@ -212,68 +194,36 @@ public class MoBackup {
         }
     }
 
-    // =========================================================================
-    // 客戶端 GUI 標籤頁註冊
-    // =========================================================================
-    @SuppressWarnings("removal")
     @EventBusSubscriber(modid = MOD_ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
     public static class ClientModEvents {
-
         @SubscribeEvent
         public static void clientSetup(final FMLClientSetupEvent event) {
             event.enqueueWork(() -> {
-                UpgradeGuiManager.registerTab(
-                        DIMENSIONAL_PICKUP_TYPE,
-                        (ContentsFilteredUpgradeContainer<PickupUpgradeWrapper> uc, Position p, StorageScreenBase<?> s) ->
-                                new DimensionalPickupUpgradeTab(
-                                        uc, p, s,
-                                        Config.SERVER.advancedPickupUpgrade.slotsInRow.get(),
-                                        SBPButtonDefinitions.BACKPACK_CONTENTS_FILTER_TYPE));
+                UpgradeGuiManager.registerTab(PICKUP_TYPE, DimensionalPickupUpgradeTab::new);
+                UpgradeGuiManager.registerTab(MAGNET_TYPE, DimensionalMagnetUpgradeTab::new);
+                UpgradeGuiManager.registerTab(DEPOSIT_TYPE, DimensionalDepositUpgradeTab::new);
+                UpgradeGuiManager.registerTab(FEEDING_TYPE, DimensionalFeedingUpgradeTab::new);
+                UpgradeGuiManager.registerTab(REFILL_TYPE, DimensionalRefillUpgradeTab::new);
+                UpgradeGuiManager.registerTab(RESTOCK_TYPE, DimensionalRestockUpgradeTab::new);
+                UpgradeGuiManager.registerTab(PUMP_TYPE, DimensionalPumpUpgradeTab::new);
+                UpgradeGuiManager.registerTab(ALCHEMY_TYPE, DimensionalAlchemyUpgradeTab::new);
 
-                UpgradeGuiManager.registerTab(
-                        DIMENSIONAL_MAGNET_TYPE,
-                        (MagnetUpgradeContainer uc, Position p, StorageScreenBase<?> s) ->
-                                new DimensionalMagnetUpgradeTab(
-                                        uc, p, s,
-                                        Config.SERVER.advancedMagnetUpgrade.slotsInRow.get(),
-                                        SBPButtonDefinitions.BACKPACK_CONTENTS_FILTER_TYPE));
-
-                UpgradeGuiManager.registerTab(
-                        DIMENSIONAL_DEPOSIT_TYPE,
-                        (DepositUpgradeContainer uc, Position p, StorageScreenBase<?> s) ->
-                                new DimensionalDepositUpgradeTab(uc, p, s));
-
-                UpgradeGuiManager.registerTab(
-                        DIMENSIONAL_FEEDING_TYPE,
-                        (FeedingUpgradeContainer uc, Position p, StorageScreenBase<?> s) ->
-                                new DimensionalFeedingUpgradeTab(
-                                        uc, p, s,
-                                        Config.SERVER.advancedFeedingUpgrade.slotsInRow.get()));
-
-                UpgradeGuiManager.registerTab(
-                        DIMENSIONAL_REFILL_TYPE,
-                        (RefillUpgradeContainer uc, Position p, StorageScreenBase<?> s) ->
-                                new DimensionalRefillUpgradeTab(
-                                        uc, p, s,
-                                        Config.SERVER.advancedRefillUpgrade.slotsInRow.get()));
-
-                UpgradeGuiManager.registerTab(
-                        DIMENSIONAL_RESTOCK_TYPE,
-                        (ContentsFilteredUpgradeContainer<RestockUpgradeWrapper> uc, Position p, StorageScreenBase<?> s) ->
-                                new DimensionalRestockUpgradeTab(
-                                        uc, p, s,
-                                        SBPButtonDefinitions.BACKPACK_CONTENTS_FILTER_TYPE));
-
-                UpgradeGuiManager.registerTab(
-                        DIMENSIONAL_PUMP_TYPE,
-                        (PumpUpgradeContainer uc, Position p, StorageScreenBase<?> s) ->
-                                new DimensionalPumpUpgradeTab(uc, p, s));
-
-                UpgradeGuiManager.registerTab(
-                        DIMENSIONAL_ALCHEMY_TYPE,
-                        (AlchemyUpgradeContainer uc, Position p, StorageScreenBase<?> s) ->
-                                new DimensionalAlchemyUpgradeTab(uc, p, s));
+                // 2. 註冊模型 Predicate: mobackup:linked
+                registerLinkedItemProperties();
             });
+        }
+
+        private static void registerLinkedItemProperties() {
+            for (var entry : ModItems.ITEMS.getEntries()) {
+                Item item = entry.get();
+                if (item instanceof IRSLinkedItem) {
+                    ItemProperties.register(
+                            item,
+                            MoBackup.rl("linked"),
+                            (stack, level, entity, seed) -> RSBridge.getBoundTarget(stack) != null ? 1.0F : 0.0F
+                    );
+                }
+            }
         }
     }
 }

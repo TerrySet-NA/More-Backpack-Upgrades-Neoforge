@@ -8,6 +8,7 @@
 
 package com.kzjy.mobackup.client.gui;
 
+import com.kzjy.mobackup.core.RSBridge;
 import net.minecraft.network.chat.Component;
 import net.p3pp3rf1y.sophisticatedbackpacks.Config;
 import net.p3pp3rf1y.sophisticatedcore.client.gui.StorageScreenBase;
@@ -19,11 +20,10 @@ import net.p3pp3rf1y.sophisticatedcore.upgrades.feeding.FeedingUpgradeTab;
 
 public class DimensionalFeedingUpgradeTab extends FeedingUpgradeTab {
 
-    public DimensionalFeedingUpgradeTab(FeedingUpgradeContainer upgradeContainer, Position position, StorageScreenBase<?> screen,
-                                       int slotsPerRow) {
+    public DimensionalFeedingUpgradeTab(FeedingUpgradeContainer upgradeContainer, Position position, StorageScreenBase<?> screen) {
         super(upgradeContainer, position, screen,
-                Component.translatable("gui.mobackup.upgrade.dimensional_feeding"),
-                Component.translatable("gui.mobackup.upgrade.dimensional_feeding.tooltip"));
+                Component.translatable("gui.mobackup.upgrade." + (RSBridge.isDimensional(upgradeContainer.getUpgradeStack()) ? "dimensional_feeding" : "network_feeding")),
+                Component.translatable("gui.mobackup.upgrade." + (RSBridge.isDimensional(upgradeContainer.getUpgradeStack()) ? "dimensional_feeding.tooltip" : "network_feeding.tooltip")));
 
         addHideableChild(new ToggleButton<>(
                 new Position(x + 3, y + 24),

@@ -11,7 +11,6 @@ package com.kzjy.mobackup.wrapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
-
 import javax.annotation.Nullable;
 
 import com.kzjy.mobackup.core.RSBridge;
@@ -23,15 +22,12 @@ import com.refinedmods.refinedstorage.api.network.Network;
 import com.refinedmods.refinedstorage.api.network.storage.StorageNetworkComponent;
 import com.refinedmods.refinedstorage.api.resource.ResourceAmount;
 import com.refinedmods.refinedstorage.api.storage.Actor;
-import com.refinedmods.refinedstorage.common.api.storage.PlayerActor;
 import com.refinedmods.refinedstorage.common.security.BuiltinPermission;
 import com.refinedmods.refinedstorage.common.support.resource.ItemResource;
 
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemHandlerHelper;
@@ -46,41 +42,30 @@ public class DimensionalDepositUpgradeWrapper extends DepositUpgradeWrapper impl
         super(backpackWrapper, upgrade, upgradeSaveHandler);
     }
 
-    private Boolean networkFirstCache = null;
-
     @Override
-    public boolean isNetworkFirst() {
-        if (networkFirstCache == null) {
-            CustomData customData = upgrade.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
-            if (customData.contains(TAG_NETWORK_FIRST)) {
-                networkFirstCache = customData.copyTag().getBoolean(TAG_NETWORK_FIRST);
-            } else {
-                networkFirstCache = false;
-            }
-        }
-        return networkFirstCache;
+    public void save() {
+        super.save();
     }
 
     @Override
-    public void setNetworkFirst(boolean networkFirst) {
-        this.networkFirstCache = networkFirst;
-        CustomData.update(DataComponents.CUSTOM_DATA, upgrade, tag -> tag.putBoolean(TAG_NETWORK_FIRST, networkFirst));
-        save();
+    public boolean getDefaultNetworkFirst() {
+        return false;
     }
 
-    public void performQuickDepositToLinkedRs(@Nullable Player actionPlayer, Player messageTarget, Level safeLevel) {
+    public void performQuickDepositToLinkedRs(Player messageTarget, Level safeLevel) {
         if (RSBridge.getCoordinate(getUpgradeStack()) == null) {
-            messageTarget.displayClientMessage(Component.translatable("misc.refinedstorage.network_card.not_found"), true);
+            messageTarget.displayClientMessage(Component.translatable("misc.mobackup.network_card.not_found"), true);
             return;
         }
 
-        Network linkedNetwork = RSBridge.getNetwork(safeLevel, getUpgradeStack(), actionPlayer, BuiltinPermission.INSERT);
+        // 位置以正在操作 GUI 的玩家 (messageTarget) 為準檢測距離，身分以 actionPlayer 為準
+        Network linkedNetwork = RSBridge.getNetwork(safeLevel, getUpgradeStack(), messageTarget, messageTarget.blockPosition(), BuiltinPermission.INSERT);
         if (linkedNetwork == null) {
-            messageTarget.displayClientMessage(Component.translatable("misc.moback.no_permission.insert"), true);
+            messageTarget.displayClientMessage(Component.translatable("misc.mobackup.no_permission.insert"), true);
             return;
         }
 
-        List<ItemStack> transferred = depositToRsNetwork(linkedNetwork, actionPlayer);
+        List<ItemStack> transferred = depositToRsNetwork(linkedNetwork, messageTarget);
         int count = transferred.size();
         String key = count > 0 ? "gui.sophisticatedbackpacks.status.stacks_deposited" : "gui.sophisticatedbackpacks.status.nothing_to_deposit";
         messageTarget.displayClientMessage(Component.translatable(key, count), true);
@@ -108,7 +93,7 @@ public class DimensionalDepositUpgradeWrapper extends DepositUpgradeWrapper impl
         if (isNetworkFirst()) {
             Network linkedNetwork = RSBridge.getNetwork(level, getUpgradeStack(), player, BuiltinPermission.EXTRACT);
             if (linkedNetwork == null) {
-                player.displayClientMessage(Component.translatable("misc.moback.no_permission.extract"), true);
+                player.displayClientMessage(Component.translatable("misc.mobackup.no_permission.extract"), true);
                 return transferred;
             }
             transferred.addAll(depositFromRsToHandler(linkedNetwork, targetHandler, player));
@@ -124,7 +109,7 @@ public class DimensionalDepositUpgradeWrapper extends DepositUpgradeWrapper impl
         StorageNetworkComponent sourceStorage = sourceNetwork.getComponent(StorageNetworkComponent.class);
         if (sourceStorage == null) return transferred;
 
-        Actor actor = player != null ? new PlayerActor(player) : Actor.EMPTY;
+        Actor actor = RSBridge.getActor(player);
 
         for (ResourceAmount ra : new ArrayList<>(sourceStorage.getAll())) {
             if (isHandlerFull(targetHandler)) break;
@@ -177,7 +162,7 @@ public class DimensionalDepositUpgradeWrapper extends DepositUpgradeWrapper impl
         Level level = player.level();
 
         if (!RSBridge.validateClickedNetwork(clickedNetwork, player, BuiltinPermission.INSERT)) {
-            player.displayClientMessage(Component.translatable("misc.moback.no_permission.insert"), true);
+            player.displayClientMessage(Component.translatable("misc.mobackup.no_permission.insert"), true);
             return;
         }
 
@@ -191,7 +176,7 @@ public class DimensionalDepositUpgradeWrapper extends DepositUpgradeWrapper impl
             }
             Network linkedNetwork = RSBridge.getNetwork(level, getUpgradeStack(), player, BuiltinPermission.EXTRACT);
             if (linkedNetwork == null) {
-                player.displayClientMessage(Component.translatable("misc.moback.no_permission.extract"), true);
+                player.displayClientMessage(Component.translatable("misc.mobackup.no_permission.extract"), true);
                 return;
             }
             transferredStacks.addAll(depositFromRsToTargetRs(linkedNetwork, clickedNetwork, player));
@@ -215,7 +200,7 @@ public class DimensionalDepositUpgradeWrapper extends DepositUpgradeWrapper impl
         }
 
         try {
-            Actor actor = player != null ? new PlayerActor(player) : Actor.EMPTY;
+            Actor actor = RSBridge.getActor(player);
 
             for (ResourceAmount ra : new ArrayList<>(sourceStorage.getAll())) {
                 if (ra.amount() <= 0) continue;
@@ -266,7 +251,7 @@ public class DimensionalDepositUpgradeWrapper extends DepositUpgradeWrapper impl
 
         try {
             ITrackedContentsItemHandler backpackInventory = storageWrapper.getInventoryForUpgradeProcessing();
-            Actor actor = player != null ? new PlayerActor(player) : Actor.EMPTY;
+            Actor actor = RSBridge.getActor(player);
 
             for (int slot = 0; slot < backpackInventory.getSlots(); slot++) {
                 ItemStack stackInSlot = backpackInventory.getStackInSlot(slot);

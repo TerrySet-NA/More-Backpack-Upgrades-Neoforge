@@ -8,6 +8,7 @@
 
 package com.kzjy.mobackup.client.gui;
 
+import com.kzjy.mobackup.core.RSBridge;
 import net.minecraft.network.chat.Component;
 import net.p3pp3rf1y.sophisticatedbackpacks.Config;
 import net.p3pp3rf1y.sophisticatedbackpacks.upgrades.deposit.DepositFilterLogicControl;
@@ -20,8 +21,8 @@ public class DimensionalDepositUpgradeTab extends DepositUpgradeTab {
 
     public DimensionalDepositUpgradeTab(DepositUpgradeContainer upgradeContainer, Position position, StorageScreenBase<?> screen) {
         super(upgradeContainer, position, screen,
-                Component.translatable("gui.mobackup.upgrade.dimensional_deposit"),
-                Component.translatable("gui.mobackup.upgrade.dimensional_deposit.tooltip"));
+                Component.translatable("gui.mobackup.upgrade." + (RSBridge.isDimensional(upgradeContainer.getUpgradeStack()) ? "dimensional_deposit" : "network_deposit")),
+                Component.translatable("gui.mobackup.upgrade." + (RSBridge.isDimensional(upgradeContainer.getUpgradeStack()) ? "dimensional_deposit.tooltip" : "network_deposit.tooltip")));
 
         // 2. 一鍵將背包中目標物品存入 RS 網路按鈕 (x + 3, y + 24)
         addHideableChild(ModGuiControls.createQuickDepositButton(new Position(x + 3, y + 24), getContainer()));

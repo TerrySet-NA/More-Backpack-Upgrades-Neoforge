@@ -8,6 +8,7 @@
 
 package com.kzjy.mobackup.client.gui;
 
+import com.kzjy.mobackup.core.RSBridge;
 import net.minecraft.network.chat.Component;
 import net.p3pp3rf1y.sophisticatedcore.client.gui.StorageScreenBase;
 import net.p3pp3rf1y.sophisticatedcore.client.gui.controls.ToggleButton;
@@ -20,8 +21,8 @@ public class DimensionalAlchemyUpgradeTab extends AlchemyUpgradeTab {
 
     public DimensionalAlchemyUpgradeTab(AlchemyUpgradeContainer upgradeContainer, Position position, StorageScreenBase<?> screen) {
         super(upgradeContainer, position, screen,
-                Component.translatable("gui.mobackup.upgrade.dimensional_alchemy"),
-                Component.translatable("gui.mobackup.upgrade.dimensional_alchemy.tooltip"),
+                Component.translatable("gui.mobackup.upgrade." + (RSBridge.isDimensional(upgradeContainer.getUpgradeStack()) ? "dimensional_alchemy" : "network_alchemy")),
+                Component.translatable("gui.mobackup.upgrade." + (RSBridge.isDimensional(upgradeContainer.getUpgradeStack()) ? "dimensional_alchemy.tooltip" : "network_alchemy.tooltip")),
                 true);
 
         // 按鈕 1: 缺少任意效果 / 缺少全部效果 (x + 3, y + 44)
@@ -41,7 +42,7 @@ public class DimensionalAlchemyUpgradeTab extends AlchemyUpgradeTab {
 
         // 按鈕 5: 目標實體類型 (x + 21, y + 24)
         if (getContainer().hasEntityMatchOption()) {
-            addHideableChild(new ToggleButton<>(new Position(x + 3 + 18, y + 24), ENTITY_MATCH,
+            addHideableChild(new ToggleButton<>(new Position(x + 3 + 18, y + TOP_POS), ENTITY_MATCH,
                     button -> getContainer().toggleEntityMatch(), () -> getContainer().getEntityMatch()));
         }
     }

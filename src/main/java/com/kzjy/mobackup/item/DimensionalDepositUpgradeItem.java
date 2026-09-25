@@ -1,11 +1,3 @@
-/*
- * Copyright (C) 2026 TerrySet
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- */
-
 package com.kzjy.mobackup.item;
 
 import com.kzjy.mobackup.wrapper.DimensionalDepositUpgradeWrapper;
@@ -26,8 +18,20 @@ public class DimensionalDepositUpgradeItem extends DepositUpgradeItem implements
     public static final UpgradeType<DepositUpgradeWrapper> TYPE = new UpgradeType<>(
             DimensionalDepositUpgradeWrapper::new);
 
-    public DimensionalDepositUpgradeItem() {
+    private final boolean dimensional;
+
+    public DimensionalDepositUpgradeItem(boolean dimensional) {
         super(Config.SERVER.advancedDepositUpgrade.filterSlots::get);
+        this.dimensional = dimensional;
+    }
+
+    public DimensionalDepositUpgradeItem() {
+        this(true);
+    }
+
+    @Override
+    public boolean isDimensional() {
+        return dimensional;
     }
 
     @Override

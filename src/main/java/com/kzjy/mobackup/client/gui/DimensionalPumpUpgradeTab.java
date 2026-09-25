@@ -8,6 +8,7 @@
 
 package com.kzjy.mobackup.client.gui;
 
+import com.kzjy.mobackup.core.RSBridge;
 import com.kzjy.mobackup.mixin.FluidFilterControlInvoker;
 import net.minecraft.network.chat.Component;
 import net.p3pp3rf1y.sophisticatedcore.client.gui.StorageScreenBase;
@@ -53,8 +54,8 @@ public class DimensionalPumpUpgradeTab extends PumpUpgradeTab {
 
     public DimensionalPumpUpgradeTab(PumpUpgradeContainer upgradeContainer, Position position, StorageScreenBase<?> screen) {
         super(upgradeContainer, position, screen,
-                Component.translatable("gui.mobackup.upgrade.dimensional_pump"),
-                Component.translatable("gui.mobackup.upgrade.dimensional_pump.tooltip"));
+                Component.translatable("gui.mobackup.upgrade." + (RSBridge.isDimensional(upgradeContainer.getUpgradeStack()) ? "dimensional_pump" : "network_pump")),
+                Component.translatable("gui.mobackup.upgrade." + (RSBridge.isDimensional(upgradeContainer.getUpgradeStack()) ? "dimensional_pump.tooltip" : "network_pump.tooltip")));
 
         // 按鈕 1: IS_INPUT 已由父類 super 註冊在 (x + 3, y + 24)
         // 按鈕 2: 優先級切換按鈕放在 (x + 21, y + 24)

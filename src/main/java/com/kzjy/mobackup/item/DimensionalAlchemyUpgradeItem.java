@@ -1,11 +1,3 @@
-/*
- * Copyright (C) 2026 TerrySet
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- */
-
 package com.kzjy.mobackup.item;
 
 import com.kzjy.mobackup.wrapper.DimensionalAlchemyUpgradeWrapper;
@@ -24,16 +16,31 @@ import java.util.List;
 import java.util.function.IntSupplier;
 
 public class DimensionalAlchemyUpgradeItem extends AlchemyUpgradeItem implements IRSLinkedItem {
-
     public static final UpgradeType<AlchemyUpgradeWrapper> TYPE = new UpgradeType<>(
             DimensionalAlchemyUpgradeWrapper::new);
 
-    public DimensionalAlchemyUpgradeItem(IntSupplier filterSlotCount) {
+    private final boolean dimensional;
+
+    public DimensionalAlchemyUpgradeItem(IntSupplier filterSlotCount, boolean dimensional) {
         super(filterSlotCount, Config.SERVER.maxUpgradesPerStorage);
+        this.dimensional = dimensional;
+    }
+
+    public DimensionalAlchemyUpgradeItem(IntSupplier filterSlotCount) {
+        this(filterSlotCount, true);
+    }
+
+    public DimensionalAlchemyUpgradeItem(boolean dimensional) {
+        this(Config.SERVER.advancedAlchemyUpgrade.filterSlots::get, dimensional);
     }
 
     public DimensionalAlchemyUpgradeItem() {
-        this(Config.SERVER.advancedAlchemyUpgrade.filterSlots::get);
+        this(true);
+    }
+
+    @Override
+    public boolean isDimensional() {
+        return dimensional;
     }
 
     @Override

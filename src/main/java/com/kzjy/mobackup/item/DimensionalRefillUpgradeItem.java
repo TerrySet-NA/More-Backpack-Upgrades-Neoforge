@@ -1,11 +1,3 @@
-/*
- * Copyright (C) 2026 TerrySet
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- */
-
 package com.kzjy.mobackup.item;
 
 import com.kzjy.mobackup.wrapper.DimensionalRefillUpgradeWrapper;
@@ -26,8 +18,20 @@ public class DimensionalRefillUpgradeItem extends RefillUpgradeItem implements I
     public static final UpgradeType<RefillUpgradeWrapper> TYPE = new UpgradeType<>(
             DimensionalRefillUpgradeWrapper::new);
 
-    public DimensionalRefillUpgradeItem() {
+    private final boolean dimensional;
+
+    public DimensionalRefillUpgradeItem(boolean dimensional) {
         super(Config.SERVER.advancedRefillUpgrade.filterSlots::get, true, true);
+        this.dimensional = dimensional;
+    }
+
+    public DimensionalRefillUpgradeItem() {
+        this(true);
+    }
+
+    @Override
+    public boolean isDimensional() {
+        return dimensional;
     }
 
     @Override

@@ -8,6 +8,7 @@
 
 package com.kzjy.mobackup.client.gui;
 
+import com.kzjy.mobackup.core.RSBridge;
 import com.kzjy.mobackup.mixin.RefillUpgradeTabAccessor;
 import net.p3pp3rf1y.sophisticatedbackpacks.Config;
 import net.p3pp3rf1y.sophisticatedbackpacks.upgrades.refill.RefillUpgradeContainer;
@@ -17,9 +18,9 @@ import net.p3pp3rf1y.sophisticatedcore.client.gui.utils.Position;
 
 public class DimensionalRefillUpgradeTab extends RefillUpgradeTab {
 
-    public DimensionalRefillUpgradeTab(RefillUpgradeContainer upgradeContainer, Position position, StorageScreenBase<?> screen,
-                                       int slotsPerRow) {
-        super(upgradeContainer, position, screen, Config.SERVER.advancedRefillUpgrade.slotsInRow.get(), "dimensional_refill");
+    public DimensionalRefillUpgradeTab(RefillUpgradeContainer upgradeContainer, Position position, StorageScreenBase<?> screen) {
+        super(upgradeContainer, position, screen, Config.SERVER.advancedRefillUpgrade.slotsInRow.get(),
+                RSBridge.isDimensional(upgradeContainer.getUpgradeStack()) ? "dimensional_refill" : "network_refill");
 
         // 1. 將過濾槽位控制項下移 20px (移至 y + 44)
         ((RefillUpgradeTabAccessor) this).mobackup$getFilterLogicControl()
@@ -29,7 +30,7 @@ public class DimensionalRefillUpgradeTab extends RefillUpgradeTab {
         refreshOpenTabDimension();
 
         // 3. 槽位實體座標同步刷新
-        moveSlotsToTab();
+        // moveSlotsToTab();
 
         // 4. 頂部工具列放入優先級切換按鈕 (x + 3, y + 24)
         addHideableChild(ModGuiControls.createPriorityButton(new Position(x + 3, y + 24), getContainer()));

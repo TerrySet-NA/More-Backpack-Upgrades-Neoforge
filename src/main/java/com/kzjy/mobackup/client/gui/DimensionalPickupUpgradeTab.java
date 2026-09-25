@@ -8,25 +8,23 @@
 
 package com.kzjy.mobackup.client.gui;
 
+import com.kzjy.mobackup.core.RSBridge;
 import net.minecraft.network.chat.Component;
 import net.p3pp3rf1y.sophisticatedbackpacks.Config;
 import net.p3pp3rf1y.sophisticatedbackpacks.client.gui.SBPButtonDefinitions;
 import net.p3pp3rf1y.sophisticatedcore.client.gui.StorageScreenBase;
-import net.p3pp3rf1y.sophisticatedcore.client.gui.controls.ButtonDefinition;
 import net.p3pp3rf1y.sophisticatedcore.client.gui.utils.Position;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.ContentsFilterControl;
-import net.p3pp3rf1y.sophisticatedcore.upgrades.ContentsFilterType;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.ContentsFilteredUpgradeContainer;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.pickup.PickupUpgradeTab;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.pickup.PickupUpgradeWrapper;
 
 public class DimensionalPickupUpgradeTab extends PickupUpgradeTab {
 
-    public DimensionalPickupUpgradeTab(ContentsFilteredUpgradeContainer<PickupUpgradeWrapper> upgradeContainer, Position position, StorageScreenBase<?> screen,
-                                       int slotsPerRow, ButtonDefinition.Toggle<ContentsFilterType> contentsFilterButton) {
+    public DimensionalPickupUpgradeTab(ContentsFilteredUpgradeContainer<PickupUpgradeWrapper> upgradeContainer, Position position, StorageScreenBase<?> screen) {
         super(upgradeContainer, position, screen,
-                Component.translatable("gui.mobackup.upgrade.dimensional_pickup"),
-                Component.translatable("gui.mobackup.upgrade.dimensional_pickup.tooltip"));
+                Component.translatable("gui.mobackup.upgrade." + (RSBridge.isDimensional(upgradeContainer.getUpgradeStack()) ? "dimensional_pickup" : "network_pickup")),
+                Component.translatable("gui.mobackup.upgrade." + (RSBridge.isDimensional(upgradeContainer.getUpgradeStack()) ? "dimensional_pickup.tooltip" : "network_pickup.tooltip")));
 
         // 優先級切換按鈕 (x + 3, y + 24)
         addHideableChild(ModGuiControls.createPriorityButton(new Position(x + 3, y + 24), getContainer()));

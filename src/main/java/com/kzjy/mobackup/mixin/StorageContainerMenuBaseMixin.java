@@ -46,15 +46,10 @@ public abstract class StorageContainerMenuBaseMixin {
             Player menuPlayer = container.getPlayer();
             Level safeLevel = menuPlayer.level();
 
-            // 規則 3: 地上方塊模式時，actionPlayer 為 null
-            boolean isBlock = menu instanceof BackpackContainer backpackContainer
-                    && backpackContainer.getBlockPosition().isPresent();
-            Player actionPlayer = isBlock ? null : menuPlayer;
-
             if ("quick_deposit".equals(action) && container.getUpgradeWrapper() instanceof DimensionalDepositUpgradeWrapper depositWrapper) {
-                depositWrapper.performQuickDepositToLinkedRs(actionPlayer, menuPlayer, safeLevel);
+                depositWrapper.performQuickDepositToLinkedRs(menuPlayer, safeLevel);
             } else if ("quick_restock".equals(action) && container.getUpgradeWrapper() instanceof DimensionalRestockUpgradeWrapper restockWrapper) {
-                restockWrapper.performQuickRestockFromLinkedRs(actionPlayer, menuPlayer, safeLevel);
+                restockWrapper.performQuickRestockFromLinkedRs(menuPlayer, safeLevel);
             }
         }
     }

@@ -11,7 +11,6 @@ package com.kzjy.mobackup.wrapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
-
 import javax.annotation.Nullable;
 
 import com.kzjy.mobackup.core.RSBridge;
@@ -22,15 +21,12 @@ import com.refinedmods.refinedstorage.api.network.Network;
 import com.refinedmods.refinedstorage.api.network.storage.StorageNetworkComponent;
 import com.refinedmods.refinedstorage.api.resource.ResourceAmount;
 import com.refinedmods.refinedstorage.api.storage.Actor;
-import com.refinedmods.refinedstorage.common.api.storage.PlayerActor;
 import com.refinedmods.refinedstorage.common.security.BuiltinPermission;
 import com.refinedmods.refinedstorage.common.support.resource.ItemResource;
 
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemHandlerHelper;
@@ -44,42 +40,25 @@ public class DimensionalRestockUpgradeWrapper extends RestockUpgradeWrapper impl
         super(backpackWrapper, upgrade, upgradeSaveHandler);
     }
 
-    private Boolean networkFirstCache = null;
-
     @Override
-    public boolean isNetworkFirst() {
-        if (networkFirstCache == null) {
-            CustomData customData = upgrade.get(DataComponents.CUSTOM_DATA);
-            if (customData != null && customData.contains(TAG_NETWORK_FIRST)) {
-                networkFirstCache = customData.copyTag().getBoolean(TAG_NETWORK_FIRST);
-            } else {
-                networkFirstCache = false;
-            }
-        }
-        return networkFirstCache;
+    public void save() {
+        super.save();
     }
 
-    @Override
-    public void setNetworkFirst(boolean networkFirst) {
-        this.networkFirstCache = networkFirst;
-        CustomData.update(DataComponents.CUSTOM_DATA, upgrade, tag -> tag.putBoolean(TAG_NETWORK_FIRST, networkFirst));
-        save();
-    }
-
-    // 規則 4: 一鍵取貨經過審查，提示訊息印給開啟介面的玩家
-    public void performQuickRestockFromLinkedRs(@Nullable Player actionPlayer, Player messageTarget, Level safeLevel) {
+    public void performQuickRestockFromLinkedRs(Player messageTarget, Level safeLevel) {
         if (RSBridge.getCoordinate(getUpgradeStack()) == null) {
-            messageTarget.displayClientMessage(Component.translatable("misc.refinedstorage.network_card.not_found"), true);
+            messageTarget.displayClientMessage(Component.translatable("misc.mobackup.network_card.not_found"), true);
             return;
         }
 
-        Network linkedNetwork = RSBridge.getNetwork(safeLevel, getUpgradeStack(), actionPlayer, BuiltinPermission.EXTRACT);
+        // 位置以正在操作 GUI 的玩家 (messageTarget) 為準檢測距離，身分以 actionPlayer 為準
+        Network linkedNetwork = RSBridge.getNetwork(safeLevel, getUpgradeStack(), messageTarget, messageTarget.blockPosition(), BuiltinPermission.EXTRACT);
         if (linkedNetwork == null) {
-            messageTarget.displayClientMessage(Component.translatable("misc.moback.no_permission.extract"), true);
+            messageTarget.displayClientMessage(Component.translatable("misc.mobackup.no_permission.extract"), true);
             return;
         }
 
-        List<ItemStack> transferred = restockFromRsToBackpack(linkedNetwork, actionPlayer);
+        List<ItemStack> transferred = restockFromRsToBackpack(linkedNetwork, messageTarget);
         int count = transferred.size();
         String key = count > 0 ? "gui.sophisticatedbackpacks.status.stacks_restocked" : "gui.sophisticatedbackpacks.status.nothing_to_restock";
         messageTarget.displayClientMessage(Component.translatable(key, count), true);
@@ -99,11 +78,10 @@ public class DimensionalRestockUpgradeWrapper extends RestockUpgradeWrapper impl
         Level level = player.level();
         StorageNetworkComponent targetStorage = null;
 
-        // 規則 10: 嚴格互斥 XOR
         if (isNetworkFirst()) {
             Network linkedNetwork = RSBridge.getNetwork(level, getUpgradeStack(), player, BuiltinPermission.INSERT);
             if (linkedNetwork == null) {
-                player.displayClientMessage(Component.translatable("misc.moback.no_permission.insert"), true);
+                player.displayClientMessage(Component.translatable("misc.mobackup.no_permission.insert"), true);
                 return transferred;
             }
             targetStorage = linkedNetwork.getComponent(StorageNetworkComponent.class);
@@ -111,8 +89,7 @@ public class DimensionalRestockUpgradeWrapper extends RestockUpgradeWrapper impl
         }
 
         ITrackedContentsItemHandler backpackInventory = storageWrapper.getInventoryForUpgradeProcessing();
-        // 規則 1: RS 對 null 沒有防禦，使用 Actor.EMPTY
-        Actor actor = player != null ? new PlayerActor(player) : Actor.EMPTY;
+        Actor actor = RSBridge.getActor(player);
 
         for (int slot = 0; slot < sourceHandler.getSlots(); slot++) {
             ItemStack inSlot = sourceHandler.getStackInSlot(slot);
@@ -145,7 +122,6 @@ public class DimensionalRestockUpgradeWrapper extends RestockUpgradeWrapper impl
                 ItemStack stackForBackpack = realExtracted.copyWithCount(countForBackpack);
                 ItemStack backpackFailed = backpackInventory.insertItem(stackForBackpack, false);
 
-                // 規則 11: 不吞物資兜底
                 if (!backpackFailed.isEmpty()) {
                     ItemStack containerRejected = ItemHandlerHelper.insertItem(sourceHandler, backpackFailed, false);
                     if (!containerRejected.isEmpty()) fallbackSafety(containerRejected, player);
@@ -160,7 +136,6 @@ public class DimensionalRestockUpgradeWrapper extends RestockUpgradeWrapper impl
                 ItemResource res = ItemResource.ofItemStack(realExtracted);
                 long actuallyInserted = targetStorage.insert(res, countForRs, Action.EXECUTE, actor);
 
-                // 規則 11: 不吞物資兜底
                 if (actuallyInserted < countForRs) {
                     int refund = countForRs - (int) actuallyInserted;
                     ItemStack refundStack = realExtracted.copyWithCount(refund);
@@ -178,7 +153,7 @@ public class DimensionalRestockUpgradeWrapper extends RestockUpgradeWrapper impl
         Level level = player.level();
 
         if (!RSBridge.validateClickedNetwork(clickedNetwork, player, BuiltinPermission.EXTRACT)) {
-            player.displayClientMessage(Component.translatable("misc.moback.no_permission.extract"), true);
+            player.displayClientMessage(Component.translatable("misc.mobackup.no_permission.extract"), true);
             return;
         }
 
@@ -192,7 +167,7 @@ public class DimensionalRestockUpgradeWrapper extends RestockUpgradeWrapper impl
             }
             Network linkedNetwork = RSBridge.getNetwork(level, getUpgradeStack(), player, BuiltinPermission.INSERT);
             if (linkedNetwork == null) {
-                player.displayClientMessage(Component.translatable("misc.moback.no_permission.insert"), true);
+                player.displayClientMessage(Component.translatable("misc.mobackup.no_permission.insert"), true);
                 return;
             }
             transferredStacks.addAll(restockFromRsToTargetRs(clickedNetwork, linkedNetwork, player));
@@ -212,7 +187,7 @@ public class DimensionalRestockUpgradeWrapper extends RestockUpgradeWrapper impl
         if (storage == null) return transferredStacks;
 
         ITrackedContentsItemHandler backpackInventory = storageWrapper.getInventoryForUpgradeProcessing();
-        Actor actor = player != null ? new PlayerActor(player) : Actor.EMPTY;
+        Actor actor = RSBridge.getActor(player);
 
         for (ResourceAmount resourceAmount : new ArrayList<>(storage.getAll())) {
             if (resourceAmount.amount() <= 0) continue;
@@ -237,7 +212,6 @@ public class DimensionalRestockUpgradeWrapper extends RestockUpgradeWrapper impl
                     ItemStack extractedStack = itemResource.toItemStack((int) actuallyExtracted);
                     ItemStack unhandled = backpackInventory.insertItem(extractedStack, false);
 
-                    // 規則 11: 退貨回 RS，若 RS 退回失敗則啟動終極掉落防禦
                     if (!unhandled.isEmpty()) {
                         long rsRefunded = storage.insert(ItemResource.ofItemStack(unhandled), unhandled.getCount(), Action.EXECUTE, actor);
                         if (rsRefunded < unhandled.getCount()) {
@@ -261,7 +235,7 @@ public class DimensionalRestockUpgradeWrapper extends RestockUpgradeWrapper impl
         StorageNetworkComponent targetStorage = targetNetwork.getComponent(StorageNetworkComponent.class);
         if (sourceStorage == null || targetStorage == null) return transferredStacks;
 
-        Actor actor = player != null ? new PlayerActor(player) : Actor.EMPTY;
+        Actor actor = RSBridge.getActor(player);
 
         for (ResourceAmount ra : new ArrayList<>(sourceStorage.getAll())) {
             if (ra.amount() <= 0) continue;
@@ -274,7 +248,7 @@ public class DimensionalRestockUpgradeWrapper extends RestockUpgradeWrapper impl
                     if (canInsert <= 0) break;
                     long extracted = sourceStorage.extract(itemResource, canInsert, Action.EXECUTE, actor);
                     if (extracted <= 0) break;
-                    
+
                     long actuallyInserted = targetStorage.insert(itemResource, extracted, Action.EXECUTE, actor);
                     if (actuallyInserted < extracted) {
                         long toRefund = extracted - actuallyInserted;

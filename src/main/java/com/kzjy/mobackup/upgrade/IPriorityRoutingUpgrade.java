@@ -8,23 +8,34 @@
 
 package com.kzjy.mobackup.upgrade;
 
-import net.minecraft.core.component.DataComponents;
+import com.kzjy.mobackup.registry.ModDataComponents;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
 
 public interface IPriorityRoutingUpgrade {
-    String TAG_NETWORK_FIRST = "PriorityNetwork";
 
-    boolean isNetworkFirst();
-    void setNetworkFirst(boolean networkFirst);
+    ItemStack getUpgradeStack();
 
-    // 靜態輔助方法：供按鈕預覽判斷
-    @SuppressWarnings("null")
+    void save();
+
+    default boolean getDefaultNetworkFirst() {
+        return false;
+    }
+
+    default boolean isNetworkFirst() {
+        return getUpgradeStack().getOrDefault(ModDataComponents.NETWORK_FIRST.get(), getDefaultNetworkFirst());
+    }
+
+    default void setNetworkFirst(boolean networkFirst) {
+        getUpgradeStack().set(ModDataComponents.NETWORK_FIRST.get(), networkFirst);
+        save();
+    }
+
+    // 靜態輔助方法：供 GUI / 按鈕直接讀寫 ItemStack，全面使用 Data Component
     static boolean isNetworkFirst(ItemStack upgradeStack) {
-        CustomData data = upgradeStack.get(DataComponents.CUSTOM_DATA);
-        if (data != null && data.contains(TAG_NETWORK_FIRST)) {
-            return data.copyTag().getBoolean(TAG_NETWORK_FIRST);
-        }
-        return true;
+        return upgradeStack.getOrDefault(ModDataComponents.NETWORK_FIRST.get(), true);
+    }
+
+    static void setNetworkFirst(ItemStack upgradeStack, boolean networkFirst) {
+        upgradeStack.set(ModDataComponents.NETWORK_FIRST.get(), networkFirst);
     }
 }
